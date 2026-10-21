@@ -11,6 +11,7 @@ import { useCore } from "./core-provider";
 import { useDescribeItem } from "./items/describe";
 import { Scanner } from "./scanner";
 import { StorePicker } from "./store-picker";
+import { SyncIndicator, useSync } from "./sync";
 import { Empty, inputClass, List, Row, useCoreData } from "./ui";
 
 export function HomeScreen() {
@@ -27,8 +28,10 @@ export function HomeScreen() {
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 py-4">
-      <header className="flex items-center justify-between gap-4">
+      <header className="flex items-center gap-2">
         <h1 className="text-2xl font-bold text-green-700">{t("App.name")}</h1>
+        <span className="flex-1" />
+        <SyncIndicator />
         <Link
           href="/settings"
           className="rounded-lg px-3 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
@@ -124,7 +127,7 @@ function Catalog() {
   const params = useSearchParams();
   const [query, setQuery] = useState(params.get("q") ?? "");
   const categoryId = params.get("c");
-  const [status] = useCoreData((core) => core.status());
+  const { status } = useSync();
   const [categories] = useCoreData((core) => core.listCategories());
   const [results] = useCoreData((core) => core.searchItems(query), [query]);
   const [inCategory] = useCoreData(
@@ -226,7 +229,7 @@ function Catalog() {
 
       {status && (
         <p className="text-center text-xs opacity-60">
-          {t("Home.itemCount", { count: status.itemCount })} · {t("Home.pendingSync", { count: status.pendingSyncCount })}
+          {t("Home.itemCount", { count: status.itemCount })}
         </p>
       )}
     </div>

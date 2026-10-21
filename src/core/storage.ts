@@ -1,8 +1,16 @@
 import Dexie, { type EntityTable, type Transaction } from "dexie";
-import { seedCategories, seedRegions } from "./seed";
+import { SEEDED_AT, seedCategories, seedRegions } from "./seed";
 import type { Category, Chain, Item, PriceObservation, Region, Store } from "./types";
 
-export type OutboxEntry = { id: string; createdAt: string };
+/** Tables whose records are pushed to and pulled from the server. */
+export const SYNCED_TABLES = ["regions", "categories", "chains", "stores", "items", "observations"] as const;
+export type SyncedTable = (typeof SYNCED_TABLES)[number];
+
+/**
+ * A record changed on this device and not yet pushed. One entry per record
+ * (`id` is "table:recordId"); the record's current state is what gets pushed.
+ */
+export type OutboxEntry = { id: string; table: SyncedTable; recordId: string; createdAt: string };
 export type SettingRecord = { key: string; value: unknown };
 
 export class HarganaStorage extends Dexie {
@@ -36,7 +44,31 @@ export class HarganaStorage extends Dexie {
     this.version(4).stores({
       observations: "id, itemId, [itemId+regionId], observedAt",
     });
+    this.version(5).upgrade(enqueueExisting);
     this.on("populate", seed);
+  }
+
+  /** Saves a record and queues it for the next push, in one transaction. */
+  async saveSynced<T extends { id: string }>(table: SyncedTable, record: T) {
+    await this.transaction("rw", this.table(table), this.outbox, async () => {
+      await this.table(table).put(record);
+      await this.outbox.put(outboxEntry(table, record.id, new Date().toISOString()));
+    });
+    return record;
+  }
+}
+
+export function outboxEntry(table: SyncedTable, recordId: string, createdAt: string): OutboxEntry {
+  return { id: `${table}:${recordId}`, table, recordId, createdAt };
+}
+
+/** Data recorded before sync existed is queued so it reaches the server too; seeds are not. */
+async function enqueueExisting(tx: Transaction) {
+  const now = new Date().toISOString();
+  for (const table of SYNCED_TABLES) {
+    const records: { id: string; updatedAt?: string }[] = await tx.table(table).toArray();
+    const changed = records.filter((r) => r.updatedAt !== SEEDED_AT);
+    await tx.table("outbox").bulkPut(changed.map((r) => outboxEntry(table, r.id, now)));
   }
 }
 

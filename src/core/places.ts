@@ -26,17 +26,7 @@ export function places(storage: HarganaStorage, clock: Clock) {
     return { ...input, id: input.id ?? crypto.randomUUID(), updatedAt: now() } as T;
   }
 
-  async function put<T>(table: { put(record: NoInfer<T>): Promise<unknown> }, record: T) {
-    await table.put(record);
-    return record;
-  }
-
-  async function activeRegionId() {
-    const id = await setting<string>(ACTIVE_REGION);
-    if (id && (await storage.regions.get(id))) return id;
-    if (await storage.regions.get(GARUT_REGION_ID)) return GARUT_REGION_ID;
-    return (await storage.regions.toCollection().first())!.id;
-  }
+  const activeRegionId = () => activeRegion(storage);
 
   return {
     listRegions: () => storage.regions.toArray().then(byName),
@@ -48,8 +38,8 @@ export function places(storage: HarganaStorage, clock: Clock) {
       if (!(input.staleDaysMarket >= 1 && input.staleDaysSupermarket >= 1)) {
         throw new CoreError("invalid", "staleness thresholds must be at least 1 day");
       }
-      return put(
-        storage.regions,
+      return storage.saveSynced(
+        "regions",
         stamp<Region>({
           ...input,
           name: input.name.trim(),
@@ -64,7 +54,7 @@ export function places(storage: HarganaStorage, clock: Clock) {
     async saveChain(input: Input<Chain>) {
       required(input.name, "name");
       must(await storage.regions.get(input.regionId), "Region", input.regionId);
-      return put(storage.chains, stamp<Chain>({ ...input, name: input.name.trim() }));
+      return storage.saveSynced("chains", stamp<Chain>({ ...input, name: input.name.trim() }));
     },
 
     listStores: (regionId?: string) =>
@@ -80,7 +70,7 @@ export function places(storage: HarganaStorage, clock: Clock) {
       } else if (input.chainId) {
         throw new CoreError("market_has_no_chain");
       }
-      return put(storage.stores, stamp<Store>({ ...input, name: input.name.trim() }));
+      return storage.saveSynced("stores", stamp<Store>({ ...input, name: input.name.trim() }));
     },
 
     /**
@@ -127,7 +117,7 @@ export function places(storage: HarganaStorage, clock: Clock) {
     listCategories: () => storage.categories.orderBy("sortOrder").toArray(),
     async saveCategory(input: Input<Category>) {
       required(input.name, "name");
-      return put(storage.categories, stamp<Category>({ ...input, name: input.name.trim() }));
+      return storage.saveSynced("categories", stamp<Category>({ ...input, name: input.name.trim() }));
     },
 
     /**
@@ -174,6 +164,14 @@ export function places(storage: HarganaStorage, clock: Clock) {
       await storage.settings.put({ key: ACTIVE_REGION, value: regionId });
     },
   };
+}
+
+/** The region the app shows: the one last chosen, else Garut, else any. */
+export async function activeRegion(storage: HarganaStorage) {
+  const id = (await storage.settings.get(ACTIVE_REGION))?.value as string | undefined;
+  if (id && (await storage.regions.get(id))) return id;
+  if (await storage.regions.get(GARUT_REGION_ID)) return GARUT_REGION_ID;
+  return (await storage.regions.toCollection().first())!.id;
 }
 
 function must<T>(record: T | undefined, what: string, id: string): T {
