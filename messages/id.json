@@ -1,0 +1,24 @@
+{
+  "App": {
+    "name": "Hargana",
+    "tagline": "Ingat harga, belanja lebih hemat"
+  },
+  "Login": {
+    "title": "Masuk",
+    "email": "Email",
+    "password": "Kata sandi",
+    "submit": "Masuk",
+    "submitting": "Memproses…",
+    "failed": "Email atau kata sandi salah.",
+    "error": "Gagal masuk. Coba lagi."
+  },
+  "Home": {
+    "signedInAs": "Masuk sebagai {email}",
+    "signOut": "Keluar",
+    "emptyTitle": "Belum ada barang",
+    "emptyBody": "Barang dan harga yang kamu catat akan muncul di sini.",
+    "itemCount": "{count, plural, other {# barang}}",
+    "pendingSync": "{count, plural, =0 {Semua tersimpan} other {# menunggu sinkron}}",
+    "loading": "Memuat…"
+  }
+}
