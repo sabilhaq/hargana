@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "postinstall": "node scripts/copy-zxing-wasm.mjs",
     "lint": "eslint && node scripts/check-logical-css.mjs",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
@@ -24,7 +25,8 @@
     "next": "16.4.2",
     "next-intl": "^4.14.9",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "zxing-wasm": "^3.1.6"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

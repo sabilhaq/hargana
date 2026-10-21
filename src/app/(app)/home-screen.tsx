@@ -2,11 +2,14 @@
 
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import type { ItemMatch } from "@/core";
-import { BarcodeSheet } from "./barcode-sheet";
+import type { Detection } from "@/lib/barcode-detector";
+import { BarcodeSheet, NotFound } from "./barcode-sheet";
+import { useCore } from "./core-provider";
 import { useDescribeItem } from "./items/describe";
+import { Scanner } from "./scanner";
 import { StorePicker } from "./store-picker";
 import { Empty, inputClass, List, Row, useCoreData } from "./ui";
 
@@ -60,10 +63,55 @@ export function HomeScreen() {
         }}
       />
 
+      <ScanPanel />
+
       <Suspense>
         <Catalog />
       </Suspense>
     </main>
+  );
+}
+
+/**
+ * The live scanner. A known product opens its page; an unknown barcode offers
+ * to add it; anything that is not a product code only shows a notice (links
+ * in QR codes are never opened).
+ */
+function ScanPanel() {
+  const t = useTranslations("Scanner");
+  const core = useCore();
+  const router = useRouter();
+  const [unknown, setUnknown] = useState<string | null>(null);
+  const [notice, setNotice] = useState<"notProduct" | "unreadable" | null>(null);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 2500);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  async function onCode({ rawValue, format }: Detection) {
+    const lookup = await core.lookupBarcode(rawValue, format);
+    if (lookup.status === "invalid") {
+      setNotice(lookup.reason === "not_product" ? "notProduct" : "unreadable");
+      return;
+    }
+    navigator.vibrate?.(60);
+    setNotice(null);
+    if (lookup.status === "found") router.push(`/item?id=${lookup.item.id}`);
+    else setUnknown(lookup.barcode);
+  }
+
+  return (
+    <div className="mt-4 flex flex-col gap-3">
+      <Scanner onCode={onCode} />
+      {notice && (
+        <p role="status" className="rounded-lg bg-neutral-100 px-3 py-2 text-center text-sm font-medium dark:bg-neutral-800">
+          {t(notice)}
+        </p>
+      )}
+      {unknown && <NotFound barcode={unknown} />}
+    </div>
   );
 }
 

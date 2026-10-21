@@ -5,7 +5,7 @@
 const VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
 const CACHE = `hargana-shell-${VERSION}`;
 const NAVIGATION_TIMEOUT_MS = 4000;
-const STATIC_ASSET = /^\/(_next\/static\/|icons\/|favicon\.ico$|manifest\.webmanifest$)/;
+const STATIC_ASSET = /^\/(_next\/static\/|icons\/|zxing\/|favicon\.ico$|manifest\.webmanifest$)/;
 
 self.addEventListener("install", () => self.skipWaiting());
 
