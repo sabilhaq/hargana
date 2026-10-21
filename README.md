@@ -18,6 +18,7 @@ With `DATABASE_URL` empty, the server uses an embedded PGlite database on disk, 
 
 | Script | Purpose |
 |---|---|
+| `pnpm build && pnpm start` | Production build — the only way to try the service worker / offline mode locally |
 | `pnpm test` | Core behavior tests (fake IndexedDB + fake clock) |
 | `pnpm lint` | ESLint + logical-CSS check (no `left`/`right`, `ml`/`mr` — keeps RTL possible) |
 | `pnpm typecheck` | Route types + TypeScript |
@@ -29,6 +30,7 @@ With `DATABASE_URL` empty, the server uses an embedded PGlite database on disk, 
 - **Hargana core** (`src/core`): the only interface the UI uses. Reads and writes on-device storage (Dexie/IndexedDB) with an injected clock. The server is reached only through sync (#11).
 - **Server** (`src/server`): Better Auth (email + password, 90-day session, no sign-up) on Postgres via Drizzle — Neon in production, PGlite locally.
 - **Proxy** (`src/proxy.ts`): redirects requests without a session cookie to `/login`. API routes verify the session themselves.
+- **PWA** (`public/sw.js`, `src/app/manifest.ts`): installable; the service worker (production builds only) keeps every route in `APP_ROUTES` and its assets cached so the app opens offline. Pages are network-first, hashed assets cache-first. The worker is registered as `/sw.js?v=<build id>`, so each deploy installs a fresh cache. Add new screens to `APP_ROUTES`. Icons come from `pnpm tsx scripts/make-icons.tsx`.
 - **i18n**: next-intl, Bahasa Indonesia only for now (`messages/id.json`).
 
 ## Deploying to Vercel
