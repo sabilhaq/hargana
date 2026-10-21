@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 import {
   compatibleUnits,
@@ -30,6 +30,7 @@ export function PricePanel({ item }: { item: Item }) {
 
   return (
     <>
+      <Summary prices={prices} />
       {store ? (
         <RecordHere key={store.id} item={item} store={store} prices={prices} onSaved={reload} />
       ) : (
@@ -50,6 +51,86 @@ function useMoney(region: Region) {
   };
 }
 
+/** Whether to buy here: the cheapest price elsewhere and the recent low. */
+function Summary({ prices: { here, cheapestElsewhere: elsewhere, lowest90Days: lowest, region } }: { prices: ItemPrices }) {
+  const t = useTranslations("Decision");
+  const money = useMoney(region);
+  const format = useFormatter();
+  if (!elsewhere && !lowest) return null;
+  // "Yomart" is ambiguous when standing in another Yomart.
+  const place =
+    elsewhere && (elsewhere.chainId && elsewhere.chainId === here?.store.chainId ? t("otherBranches", { chain: elsewhere.name }) : elsewhere.name);
+
+  let verdict: { text: string; tone: "good" | "warn" | "plain" } | null = null;
+  if (elsewhere && elsewhere.difference !== null) {
+    if (elsewhere.difference > 0) {
+      verdict = { text: t("cheaperElsewhere", { amount: money(elsewhere.difference), store: place! }), tone: "warn" };
+    } else if (elsewhere.difference === 0) {
+      verdict = { text: t("sameElsewhere", { store: place! }), tone: "good" };
+    } else {
+      verdict = { text: t("cheapestHere", { amount: money(-elsewhere.difference), store: place! }), tone: "good" };
+    }
+  } else if (elsewhere) {
+    verdict = { text: t("cheapest", { price: money(elsewhere.price, elsewhere.priceMax), store: place! }), tone: "plain" };
+  }
+  const tone = {
+    good: "bg-green-100 text-green-900 dark:bg-green-900 dark:text-green-100",
+    warn: "bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100",
+    plain: "bg-neutral-100 dark:bg-neutral-800",
+  };
+
+  return (
+    <section className="flex flex-col gap-2">
+      {verdict && <p className={`rounded-xl px-4 py-3 font-semibold ${tone[verdict.tone]}`}>{verdict.text}</p>}
+      {lowest && (
+        <p className="text-sm">
+          <span className="opacity-60">{t("lowest90")}: </span>
+          <span className="font-semibold tabular-nums">{money(lowest.price)}</span>
+          <span className="opacity-60">
+            {" "}
+            · {lowest.store.name} · {format.dateTime(new Date(lowest.observedAt), { day: "numeric", month: "short" })}
+            {here && here.price <= lowest.price && ` · ${t("atLowest")}`}
+          </span>
+        </p>
+      )}
+    </section>
+  );
+}
+
+/** The effective price; while a promo runs, also the struck-through regular price and the promo's last day. */
+function PriceText({
+  price,
+  regularPrice,
+  priceMax,
+  promoUntil,
+  region,
+  size = "base",
+}: {
+  price: number;
+  regularPrice: number;
+  priceMax: number | null;
+  promoUntil: string | null;
+  region: Region;
+  size?: "base" | "large";
+}) {
+  const t = useTranslations("Prices");
+  const money = useMoney(region);
+  const format = useFormatter();
+  return (
+    <>
+      <span className={`${size === "large" ? "text-2xl font-bold" : "font-semibold"} tabular-nums`}>{money(price, priceMax)}</span>
+      {promoUntil && (
+        <span className="block text-xs">
+          <s className="opacity-60">{money(regularPrice)}</s>{" "}
+          <span className="font-semibold text-red-700 dark:text-red-400">
+            {t("promoUntil", { date: format.dateTime(new Date(`${promoUntil}T00:00:00`), { day: "numeric", month: "short" }) })}
+          </span>
+        </span>
+      )}
+    </>
+  );
+}
+
 /**
  * With a known price here: "Sama ✓" (one tap) or "Ubah harga". Without one:
  * the record form straight away.
@@ -57,7 +138,6 @@ function useMoney(region: Region) {
 function RecordHere({ item, store, prices, onSaved }: { item: Item; store: Store; prices: ItemPrices; onSaved: () => void }) {
   const t = useTranslations();
   const core = useCore();
-  const money = useMoney(prices.region);
   const { saving, error, run } = useSave();
   const [changing, setChanging] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -90,9 +170,9 @@ function RecordHere({ item, store, prices, onSaved }: { item: Item; store: Store
     <section className="flex flex-col gap-3 rounded-xl border border-green-700/30 bg-green-50/50 p-4 dark:bg-green-950/40">
       <div>
         <p className="text-sm opacity-70">{t("Prices.hereAt", { store: store.name })}</p>
-        <p className="text-2xl font-bold tabular-nums">
-          {money(here.price, here.priceMax)}
-          <span className="ms-1 text-sm font-normal opacity-60">{t("Items.perUnit", { unit: t(`Units.${prices.unit}`) })}</span>
+        <p>
+          <PriceText {...here} region={prices.region} size="large" />
+          <span className="text-sm opacity-60">{t("Items.perUnit", { unit: t(`Units.${prices.unit}`) })}</span>
         </p>
         <p className="text-sm opacity-60">
           {here.fromChain && `${t("Prices.chainPrice", { chain: here.chain?.name ?? "" })} · `}
@@ -119,12 +199,11 @@ function RecordHere({ item, store, prices, onSaved }: { item: Item; store: Store
 
 function PriceList({ prices: { rows, region, unit }, here }: { prices: ItemPrices; here?: string }) {
   const t = useTranslations();
-  const money = useMoney(region);
   const perUnit = t("Items.perUnit", { unit: t(`Units.${unit}`) });
 
-  const priceCell = (price: number, priceMax: number | null) => (
+  const priceCell = (p: { price: number; regularPrice: number; priceMax: number | null; promoUntil: string | null }) => (
     <div className="shrink-0 text-end">
-      <div className="font-semibold tabular-nums">{money(price, priceMax)}</div>
+      <PriceText {...p} region={region} />
       <div className="text-xs opacity-60">{perUnit}</div>
     </div>
   );
@@ -146,7 +225,7 @@ function PriceList({ prices: { rows, region, unit }, here }: { prices: ItemPrice
         {p.stale && <span className="text-sm font-medium text-amber-700 dark:text-amber-400">{t("Prices.stale")}</span>}
         {p.note && <span className="text-sm italic opacity-70">{p.note}</span>}
       </div>
-      {priceCell(p.price, p.priceMax)}
+      {priceCell(p)}
     </div>
   );
 
@@ -170,7 +249,7 @@ function PriceList({ prices: { rows, region, unit }, here }: { prices: ItemPrice
               {r.varies && <span className="text-sm font-medium text-amber-700 dark:text-amber-400">{t("Prices.varies")}</span>}
               {r.stale && <span className="text-sm font-medium text-amber-700 dark:text-amber-400">{t("Prices.stale")}</span>}
             </div>
-            {priceCell(r.price, r.priceMax)}
+            {priceCell(r)}
           </summary>
           <ul className="border-t border-neutral-200 bg-neutral-50 ps-4 dark:border-neutral-800 dark:bg-neutral-900">
             {r.branches.map((b) => (
@@ -213,6 +292,9 @@ function RecordForm({
   const [entryUnit, setEntryUnit] = useState<EntryUnit>(unit);
   const [note, setNote] = useState("");
   const [scope, setScope] = useState<"branch" | "chain">("branch");
+  const [promo, setPromo] = useState(false);
+  const [promoAmount, setPromoAmount] = useState("");
+  const [promoUntil, setPromoUntil] = useState("");
   const [chainName] = useCoreData(
     async (c) => (store.chainId ? (await c.listChains(store.regionId)).find((ch) => ch.id === store.chainId)?.name : undefined),
     [store.id],
@@ -238,6 +320,8 @@ function RecordForm({
         unit: entryUnit,
         note: isMarket ? note : null,
         scope: isMarket ? undefined : scope,
+        promoAmount: promo ? parseAmount(promoAmount, region.currency) : null,
+        promoUntil: promo ? promoUntil : null,
       }),
     );
     if (ok) onSaved();
@@ -311,6 +395,28 @@ function RecordForm({
             </label>
           ))}
         </fieldset>
+      )}
+      {!range && (
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={promo} onChange={(e) => setPromo(e.target.checked)} className="size-5" />
+          {t("Prices.hasPromo")}
+        </label>
+      )}
+      {promo && !range && (
+        <div className="grid grid-cols-2 gap-2">
+          <Field label={t("Prices.promoPrice")}>
+            <input
+              required
+              inputMode={numeric}
+              value={promoAmount}
+              onChange={(e) => setPromoAmount(e.target.value)}
+              className={`${inputClass} tabular-nums`}
+            />
+          </Field>
+          <Field label={t("Prices.promoLastDay")}>
+            <input required type="date" value={promoUntil} onChange={(e) => setPromoUntil(e.target.value)} className={inputClass} />
+          </Field>
+        </div>
       )}
       {showsConversion && (
         <p className="text-sm font-medium">

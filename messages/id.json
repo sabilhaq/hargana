@@ -200,6 +200,19 @@
     "varies": "berbeda di beberapa cabang",
     "scope": "Berlaku untuk",
     "thisBranch": "Cabang ini saja",
-    "wholeChain": "Seluruh {chain}"
+    "wholeChain": "Seluruh {chain}",
+    "promoUntil": "promo s.d. {date}",
+    "hasPromo": "Ada harga promo",
+    "promoPrice": "Harga promo",
+    "promoLastDay": "Promo sampai"
+  },
+  "Decision": {
+    "cheaperElsewhere": "{amount} lebih murah di {store}",
+    "sameElsewhere": "Harga sama dengan di {store}",
+    "cheapestHere": "Di sini paling murah — {amount} lebih murah dari {store}",
+    "cheapest": "Termurah: {price} di {store}",
+    "lowest90": "Terendah 90 hari",
+    "atLowest": "harga di sini setara terendah",
+    "otherBranches": "cabang {chain} lain"
   }
 }

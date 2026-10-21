@@ -144,6 +144,9 @@ export type PriceObservation = {
   enteredQty: number;
   enteredUnit: EntryUnit;
   note: string | null;
+  /** Promo price (same units as `price`), valid through `promoUntil` (YYYY-MM-DD, inclusive). */
+  promoPrice?: number | null;
+  promoUntil?: string | null;
   source: "collector" | "shopper";
   verified: boolean;
   observedAt: string;
@@ -163,13 +166,20 @@ export type PriceEntry = {
    * every branch of its chain that has no newer price of its own.
    */
   scope?: "branch" | "chain";
+  /** A promo price for the same quantity, valid through `promoUntil` (YYYY-MM-DD). */
+  promoAmount?: number | null;
+  promoUntil?: string | null;
 };
 
 /** The current price of an item at one store. */
 export type StorePrice = {
   store: Store;
   chain: Chain | null;
+  /** The effective price: the promo price while a promo runs, otherwise the regular one. */
   price: number;
+  regularPrice: number;
+  /** Set while a promo runs: its last day (YYYY-MM-DD). */
+  promoUntil: string | null;
   priceMax: number | null;
   note: string | null;
   observedAt: string;
@@ -202,4 +212,26 @@ export type ItemPrices = {
   rows: PriceRow[];
   /** The current store's price, when a store is set and has one. */
   here: StorePrice | null;
+  /**
+   * The cheapest price anywhere else in the region. A chain price shared by
+   * several branches counts once, under the chain's name.
+   */
+  cheapestElsewhere: Elsewhere | null;
+  /** The lowest price recorded in the region in the last 90 days (promos included). */
+  lowest90Days: { price: number; observedAt: string; store: Store } | null;
+};
+
+export type Elsewhere = {
+  /** The store, or the chain when its chain price applies at several branches. */
+  name: string;
+  /** Set when this is a chain price shared by branches. */
+  chainId: string | null;
+  price: number;
+  priceMax: number | null;
+  regularPrice: number;
+  promoUntil: string | null;
+  ageDays: number;
+  stale: boolean;
+  /** Price here minus this price: positive means it is cheaper elsewhere. Null without a price here. */
+  difference: number | null;
 };
