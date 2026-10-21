@@ -1,5 +1,6 @@
 import { liveQuery } from "dexie";
 import { catalog } from "./catalog";
+import { exporter } from "./export";
 import { systemClock, type Clock } from "./clock";
 import { photos } from "./photos";
 import { places } from "./places";
@@ -17,6 +18,7 @@ export { PRICING_UNITS, SIZE_UNITS } from "./types";
 export type * from "./types";
 export { compatibleUnits, perUnitPrice } from "./units";
 export { emptyRecords } from "./sync";
+export type { ExportData } from "./export";
 export { MAX_PHOTO_BYTES, MAX_THUMB_BYTES } from "./photos";
 export type * from "./sync";
 
@@ -57,6 +59,7 @@ export function createCore({ storage = new HarganaStorage(), clock = systemClock
     ...catalog(storage, clock, metadata),
     ...prices(storage, clock, placesApi.context),
     ...photos(storage, clock),
+    ...exporter(storage, clock),
     ...sync(storage, clock),
   };
 }
