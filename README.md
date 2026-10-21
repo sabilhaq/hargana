@@ -24,6 +24,7 @@ With `DATABASE_URL` empty, the server uses an embedded PGlite database on disk, 
 | `pnpm typecheck` | Route types + TypeScript |
 | `pnpm db:generate` | Generate a migration after editing the server schema |
 | `pnpm user:create [email] [password] [name]` | Create the owner account (sign-up is closed in the app) |
+| `pnpm user:password <email> <new-password>` | Change a password and sign that user out everywhere |
 
 ## Architecture
 
