@@ -1,7 +1,7 @@
 import type { Clock } from "./clock";
 import { activeRegion } from "./places";
 import { SYNCED_TABLES, type HarganaStorage, type OutboxEntry } from "./storage";
-import type { Category, Chain, Item, PriceObservation, Region, Store } from "./types";
+import type { Category, Chain, Item, PriceObservation, Region, Store, UnknownBarcodeScan } from "./types";
 
 // The sync contract: the only thing the server and the device agree on.
 
@@ -13,6 +13,7 @@ export type SyncRecords = {
   stores: Store[];
   items: Item[];
   observations: PriceObservation[];
+  unknownBarcodes: UnknownBarcodeScan[];
 };
 
 /** Changed records, keyed by their client-generated ids. Pushing the same batch twice changes nothing. */
@@ -29,7 +30,8 @@ export type PushResponse = {
 
 /**
  * Everything changed after `cursor` (0 for everything): regions, categories
- * and items everywhere; chains, stores and observations only in `regionIds`.
+ * and items everywhere; chains, stores, observations and unknown-barcode scans
+ * only in `regionIds`.
  */
 export type PullRequest = { regionIds: string[]; cursor: number };
 export type PullResponse = SyncRecords & { cursor: number };
@@ -55,7 +57,7 @@ const PUSH_BATCH = 200;
 const SYNC_CURSORS = "syncCursors";
 
 export function emptyRecords(): SyncRecords {
-  return { regions: [], categories: [], chains: [], stores: [], items: [], observations: [] };
+  return { regions: [], categories: [], chains: [], stores: [], items: [], observations: [], unknownBarcodes: [] };
 }
 
 export function sync(storage: HarganaStorage, clock: Clock) {
@@ -153,7 +155,7 @@ export function sync(storage: HarganaStorage, clock: Clock) {
 
   /**
    * Stores pulled records. Newer wins; a record changed here and not yet
-   * pushed is kept, and observations never change once recorded.
+   * pushed is kept, and observations and scans never change once recorded.
    */
   async function apply(records: SyncRecords) {
     let count = 0;
@@ -170,7 +172,7 @@ export function sync(storage: HarganaStorage, clock: Clock) {
         const fresh = incoming.filter((record, i) => {
           if (pending[i]) return false;
           if (!local[i]) return true;
-          return table !== "observations" && record.updatedAt! > local[i].updatedAt;
+          return !!record.updatedAt && record.updatedAt > local[i].updatedAt;
         });
         await storage.table(table).bulkPut(fresh);
         count += fresh.length;

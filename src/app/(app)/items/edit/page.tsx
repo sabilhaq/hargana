@@ -8,6 +8,7 @@ import {
   SIZE_UNITS,
   type Category,
   type Commodity,
+  type HarganaCore,
   type Item,
   type PricingUnit,
   type Product,
@@ -19,8 +20,9 @@ import { ItemPhoto, useBytesUrl } from "../photo";
 import { Empty, Field, FormActions, FormError, inputClass, Screen, useCoreData, useSave } from "../../ui";
 
 // Add or edit an item. `?id=` edits; otherwise `?kind=product&barcode=` adds a
-// product (e.g. after an unknown barcode) and anything else adds a commodity,
-// pre-filled from `?name=` and `?category=`.
+// product (e.g. after an unknown barcode), pre-filled from Open Food Facts when
+// online, and anything else adds a commodity, pre-filled from `?name=` and
+// `?category=`.
 export default function EditItemPage() {
   return (
     <Suspense>
@@ -41,25 +43,65 @@ function EditItem() {
   const [categories] = useCoreData((core) => core.listCategories());
   const kind = item && item !== "missing" ? item.kind : params.get("kind") === "product" ? "product" : "commodity";
   const title = id ? t("edit") : kind === "product" ? t("addProduct") : t("add");
+  const barcode = params.get("barcode") ?? "";
+  const lookUp = !id && kind === "product" && barcode !== "";
+  const [suggested] = useCoreData((core) => (lookUp ? suggestion(core, barcode) : Promise.resolve(null)), [lookUp, barcode]);
 
   return (
     <Screen title={title} back="/">
       {item === "missing" && <Empty>{t("notFound")}</Empty>}
-      {item !== undefined && item !== "missing" && categories && (
+      {suggested === undefined && <Empty>{t("lookingUp")}</Empty>}
+      {item !== undefined && item !== "missing" && categories && suggested !== undefined && (
         <ItemForm
           key={item?.id ?? kind}
           kind={kind}
           item={item}
           categories={categories}
           defaults={{
-            name: params.get("name") ?? "",
+            name: suggested?.name ?? params.get("name") ?? "",
             category: params.get("category") ?? "",
-            barcode: params.get("barcode") ?? "",
+            barcode,
+            brand: suggested?.brand,
+            sizeValue: suggested?.sizeValue,
+            sizeUnit: suggested?.sizeUnit,
+            photo: suggested?.photo,
+            suggested: !!suggested,
           }}
         />
       )}
     </Screen>
   );
+}
+
+type Defaults = {
+  name: string;
+  category: string;
+  barcode: string;
+  brand?: string;
+  sizeValue?: number;
+  sizeUnit?: SizeUnit;
+  photo?: CompressedPhoto;
+  /** Pre-filled from Open Food Facts. */
+  suggested?: boolean;
+};
+
+/**
+ * Open Food Facts' details for a new barcode, with its image compressed as the
+ * photo. Null when offline or unknown there, so the form opens empty.
+ */
+async function suggestion(core: HarganaCore, barcode: string) {
+  const found = await core.suggestProduct(barcode);
+  if (!found) return null;
+  let photo: CompressedPhoto | undefined;
+  if (found.imageUrl) {
+    try {
+      const response = await fetch(found.imageUrl, { signal: AbortSignal.timeout(6000) });
+      if (response.ok) photo = await compressPhoto(await response.blob());
+    } catch {
+      // No photo then; the rest still helps.
+    }
+  }
+  return { ...found, photo };
 }
 
 function ItemForm({
@@ -71,7 +113,7 @@ function ItemForm({
   kind: Item["kind"];
   item: Item | null;
   categories: Category[];
-  defaults: { name: string; category: string; barcode: string };
+  defaults: Defaults;
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -81,7 +123,7 @@ function ItemForm({
   const commodity = item?.kind === "commodity" ? item : undefined;
   const leave = () => (history.length > 1 ? router.back() : router.replace("/"));
   // A new photo, "remove", or null to keep the current one.
-  const [photo, setPhoto] = useState<CompressedPhoto | "remove" | null>(null);
+  const [photo, setPhoto] = useState<CompressedPhoto | "remove" | null>(defaults.photo ?? null);
   const [compressing, setCompressing] = useState(false);
   const [photoFailed, setPhotoFailed] = useState(false);
   const preview = useBytesUrl(photo && photo !== "remove" ? photo.thumb : null);
@@ -139,6 +181,11 @@ function ItemForm({
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
+      {defaults.suggested && (
+        <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-900 dark:bg-green-950 dark:text-green-100">
+          {t("Items.suggested")}
+        </p>
+      )}
       {kind === "product" && (
         <Field label={t("Items.barcode")}>
           <input
@@ -163,7 +210,7 @@ function ItemForm({
       {kind === "product" ? (
         <>
           <Field label={t("Items.brand")}>
-            <input name="brand" defaultValue={product?.brand} placeholder="Indomie" className={inputClass} />
+            <input name="brand" defaultValue={product?.brand ?? defaults.brand} placeholder="Indomie" className={inputClass} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label={t("Items.size")}>
@@ -173,7 +220,7 @@ function ItemForm({
                 min={0}
                 step="any"
                 inputMode="decimal"
-                defaultValue={product?.sizeValue}
+                defaultValue={product?.sizeValue ?? defaults.sizeValue}
                 placeholder="85"
                 className={inputClass}
               />
@@ -181,7 +228,7 @@ function ItemForm({
             <Field label={t("Items.sizeUnit")}>
               {select(
                 "sizeUnit",
-                product?.sizeUnit ?? "g",
+                product?.sizeUnit ?? defaults.sizeUnit ?? "g",
                 SIZE_UNITS.map((unit) => (
                   <option key={unit} value={unit}>
                     {t(`Units.${unit}`)}

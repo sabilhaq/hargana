@@ -124,6 +124,32 @@ export type CommodityInput = Omit<Commodity, "id" | "kind" | "photo" | "createdA
 /** `barcode` may be in any valid EAN/UPC form; it is stored canonically. */
 export type ProductInput = Omit<Product, "id" | "kind" | "photo" | "createdAt" | "updatedAt"> & { id?: string };
 
+/** One lookup of a barcode that was not in the catalog, kept so it can be added later. */
+export type UnknownBarcodeScan = {
+  id: string;
+  barcode: string;
+  regionId: string;
+  scannedAt: string;
+};
+
+/** A barcode still missing from the catalog, with how often it was looked up. */
+export type UnknownBarcode = { barcode: string; count: number; lastScannedAt: string };
+
+/** What an outside product database knows about a barcode, to pre-fill the add form. */
+export type ProductSuggestion = {
+  name: string;
+  brand?: string;
+  sizeValue?: number;
+  sizeUnit?: SizeUnit;
+  /** A same-origin URL of a product image, if there is one. */
+  imageUrl?: string;
+};
+
+/** Looks barcodes up in an outside product database (Open Food Facts). Null when unknown. */
+export type ProductMetadata = {
+  lookup(barcode: string): Promise<ProductSuggestion | null>;
+};
+
 export type BarcodeFormat = "ean_13" | "ean_8" | "upc_a" | "upc_e";
 
 /** What a scanned or typed code turned out to be. */

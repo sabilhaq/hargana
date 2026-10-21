@@ -47,6 +47,7 @@ export default function SettingsPage() {
           <Row href="/settings/regions" title={t("Regions.title")} detail={t("Settings.regionsHint")} trailing="›" />
           <Row href="/settings/stores" title={t("Stores.title")} detail={t("Settings.storesHint")} trailing="›" />
           <Row href="/settings/categories" title={t("Categories.title")} trailing="›" />
+          <Row href="/settings/unknown-barcodes" title={t("UnknownBarcodes.title")} detail={t("Settings.unknownBarcodesHint")} trailing="›" />
         </List>
       </Section>
 

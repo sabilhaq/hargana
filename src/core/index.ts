@@ -6,6 +6,7 @@ import { places } from "./places";
 import { prices } from "./prices";
 import { HarganaStorage } from "./storage";
 import { sync } from "./sync";
+import type { ProductMetadata } from "./types";
 
 export type { Clock } from "./clock";
 export { CoreError, type CoreErrorCode } from "./errors";
@@ -27,13 +28,15 @@ export type CoreStatus = {
 export type CoreDeps = {
   storage?: HarganaStorage;
   clock?: Clock;
+  /** Outside product database for pre-filling new products; none means always by hand. */
+  metadata?: ProductMetadata;
 };
 
 /**
  * The Hargana core: the only interface the UI uses. Reads and writes on-device
  * storage; the server is reached only through sync.
  */
-export function createCore({ storage = new HarganaStorage(), clock = systemClock }: CoreDeps = {}) {
+export function createCore({ storage = new HarganaStorage(), clock = systemClock, metadata }: CoreDeps = {}) {
   const placesApi = places(storage, clock);
   async function status(): Promise<CoreStatus> {
     const [itemCount, changes, photoUploads] = await Promise.all([
@@ -51,7 +54,7 @@ export function createCore({ storage = new HarganaStorage(), clock = systemClock
       return () => subscription.unsubscribe();
     },
     ...placesApi,
-    ...catalog(storage, clock),
+    ...catalog(storage, clock, metadata),
     ...prices(storage, clock, placesApi.context),
     ...photos(storage, clock),
     ...sync(storage, clock),

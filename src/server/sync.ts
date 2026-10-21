@@ -49,7 +49,7 @@ export function createSyncHandlers({ db, session }: { db: Db; session: Session }
  * stored: the response maps it to the stored one.
  */
 export async function push(db: Db, batch: PushRequest): Promise<PushResponse> {
-  const { regions, categories, chains, stores, items, observations, itemAliases } = schema;
+  const { regions, categories, chains, stores, items, observations, unknownBarcodes, itemAliases } = schema;
 
   await upsert(db, regions, batch.regions.map((r) => row(r)));
   await upsert(db, categories, batch.categories.map((r) => row(r)));
@@ -86,14 +86,17 @@ export async function push(db: Db, batch: PushRequest): Promise<PushResponse> {
   });
   if (rows.length) await db.insert(observations).values(rows).onConflictDoNothing();
 
+  const scans = batch.unknownBarcodes.map((s) => ({ id: s.id, updatedAt: s.scannedAt, data: s, regionId: s.regionId }));
+  if (scans.length) await db.insert(unknownBarcodes).values(scans).onConflictDoNothing();
+
   return { mappings, items: kept };
 }
 
 /** Records changed after the cursor: global ones everywhere, regional ones only in the given regions. */
 export async function pull(db: Db, { regionIds, cursor }: PullRequest): Promise<PullResponse> {
-  const { regions, categories, chains, stores, items, observations } = schema;
+  const { regions, categories, chains, stores, items, observations, unknownBarcodes } = schema;
   const regional = regionIds.length > 0;
-  const [r, c, ch, st, it, ob] = await Promise.all([
+  const [r, c, ch, st, it, ob, ub] = await Promise.all([
     db.select({ seq: regions.seq, data: regions.data }).from(regions).where(gt(regions.seq, cursor)),
     db.select({ seq: categories.seq, data: categories.data }).from(categories).where(gt(categories.seq, cursor)),
     regional
@@ -109,8 +112,14 @@ export async function pull(db: Db, { regionIds, cursor }: PullRequest): Promise<
           .from(observations)
           .where(and(inArray(observations.regionId, regionIds), gt(observations.seq, cursor)))
       : [],
+    regional
+      ? db
+          .select({ seq: unknownBarcodes.seq, data: unknownBarcodes.data })
+          .from(unknownBarcodes)
+          .where(and(inArray(unknownBarcodes.regionId, regionIds), gt(unknownBarcodes.seq, cursor)))
+      : [],
   ]);
-  const all = [r, c, ch, st, it, ob].flat();
+  const all = [r, c, ch, st, it, ob, ub].flat();
   const data = <T>(rows: { data: unknown }[]) => rows.map((row) => row.data as T);
   return {
     regions: data(r),
@@ -119,6 +128,7 @@ export async function pull(db: Db, { regionIds, cursor }: PullRequest): Promise<
     stores: data(st),
     items: data(it),
     observations: data(ob),
+    unknownBarcodes: data(ub),
     cursor: Math.max(cursor, ...all.map((row) => row.seq)),
   };
 }
@@ -156,12 +166,12 @@ function parsePush(body: unknown): PushRequest {
   for (const table of Object.keys(batch) as (keyof SyncRecords)[]) {
     const records = body[table] ?? [];
     if (!Array.isArray(records)) throw new BadRequest(`${table} must be an array`);
-    const stamp = table === "observations" ? "observedAt" : "updatedAt";
+    const stamp = table === "observations" ? "observedAt" : table === "unknownBarcodes" ? "scannedAt" : "updatedAt";
     for (const record of records) {
       if (!isObject(record) || typeof record.id !== "string" || typeof record[stamp] !== "string") {
         throw new BadRequest(`${table}: every record needs an id and ${stamp}`);
       }
-      if (["chains", "stores", "observations"].includes(table) && typeof record.regionId !== "string") {
+      if (["chains", "stores", "observations", "unknownBarcodes"].includes(table) && typeof record.regionId !== "string") {
         throw new BadRequest(`${table}: every record needs a regionId`);
       }
       if (table === "observations" && typeof record.itemId !== "string") throw new BadRequest("observations need an itemId");

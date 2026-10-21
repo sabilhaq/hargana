@@ -17,7 +17,7 @@ async function database() {
     return db;
   })();
   const db = await shared;
-  await db.execute(sql`truncate regions, categories, chains, stores, items, observations, item_aliases`);
+  await db.execute(sql`truncate regions, categories, chains, stores, items, observations, unknown_barcodes, item_aliases`);
   return db;
 }
 

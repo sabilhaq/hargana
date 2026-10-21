@@ -185,3 +185,18 @@ describe("the sync API", () => {
     expect((await call("pull", { regionIds: "garut", cursor: 0 })).status).toBe(400);
   });
 });
+
+describe("unknown barcode scans", () => {
+  it("reach the other devices", async () => {
+    const { transport } = await testServer();
+    const a = testCore().core;
+    const b = testCore().core;
+    await a.lookupBarcode("8992388101016");
+    await a.lookupBarcode("8992388101016");
+
+    await a.sync(transport);
+    await b.sync(transport);
+
+    expect(await b.listUnknownBarcodes()).toMatchObject([{ barcode: "8992388101016", count: 2 }]);
+  });
+});
