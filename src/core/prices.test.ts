@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { compatibleUnits, currencyDigits, type HarganaCore, type PricingUnit } from ".";
+import { compatibleUnits, currencyDigits, type HarganaCore, type PriceRow, type PricingUnit } from ".";
 import { testCore } from "./testing";
 
 const DAY = 24 * 60 * 60 * 1000;
+const name = (row: PriceRow) => (row.kind === "chain" ? row.chain.name : row.store.name);
 
 async function setUp(core: HarganaCore) {
   const regionId = (await core.context()).activeRegion.id;
@@ -100,7 +101,7 @@ describe("recording a price", () => {
     expect(observations.map((o) => o.id)).toEqual([second.id, first.id]);
     expect(observations[1]).toEqual(first);
     expect(second.action).toBe("change");
-    expect((await core.itemPrices(bawang.id)).prices.map((p) => p.price)).toEqual([32000]);
+    expect((await core.itemPrices(bawang.id)).rows.map((p) => p.price)).toEqual([32000]);
   });
 });
 
@@ -114,9 +115,9 @@ describe("market ranges", () => {
     await core.setCurrentStore(ciawitali.id);
     await core.recordPrice({ itemId: bawang.id, amount: 30000, qty: 1, unit: "kg" });
 
-    const { prices } = await core.itemPrices(bawang.id);
+    const { rows: prices } = await core.itemPrices(bawang.id);
 
-    expect(prices.map((p) => [p.store.name, p.price, p.priceMax, p.note])).toEqual([
+    expect(prices.map((p) => [name(p), p.price, p.priceMax, p.note])).toEqual([
       ["Pasar Guntur", 28000, 40000, "tergantung kios"],
       ["Pasar Ciawitali", 30000, null, null],
     ]);
@@ -144,13 +145,13 @@ describe("prices on the result screen", () => {
 
     clock.advance(8 * DAY);
     const afterAWeek = await core.itemPrices(bawang.id);
-    expect(afterAWeek.prices.map((p) => [p.store.name, p.ageDays, p.stale])).toEqual([
+    expect(afterAWeek.rows.map((p) => [name(p), p.ageDays, p.stale])).toEqual([
       ["Pasar Guntur", 8, true], // markets: 7 days
       ["Yomart Garut Kota", 8, false], // supermarkets: 30 days
     ]);
 
     clock.advance(23 * DAY);
-    expect((await core.itemPrices(bawang.id)).prices.every((p) => p.stale)).toBe(true);
+    expect((await core.itemPrices(bawang.id)).rows.every((p) => p.stale)).toBe(true);
   });
 
   it("uses the region's own thresholds", async () => {
@@ -162,7 +163,7 @@ describe("prices on the result screen", () => {
 
     clock.advance(3 * DAY);
 
-    expect((await core.itemPrices(bawang.id)).prices[0].stale).toBe(true);
+    expect((await core.itemPrices(bawang.id)).rows[0].stale).toBe(true);
   });
 
   it("shows only prices from the active region", async () => {
@@ -181,7 +182,7 @@ describe("prices on the result screen", () => {
 
     await core.setActiveRegion(cairo.id);
 
-    expect(await core.itemPrices(bawang.id)).toMatchObject({ region: { id: cairo.id }, prices: [] });
+    expect(await core.itemPrices(bawang.id)).toMatchObject({ region: { id: cairo.id }, rows: [] });
   });
 
   it("prices products per item", async () => {
@@ -192,6 +193,6 @@ describe("prices on the result screen", () => {
 
     await core.recordPrice({ itemId: indomie.id, amount: 10000, qty: 3, unit: "pcs" });
 
-    expect(await core.itemPrices(indomie.id)).toMatchObject({ unit: "pcs", prices: [{ price: 3333, priceMax: null }] });
+    expect(await core.itemPrices(indomie.id)).toMatchObject({ unit: "pcs", rows: [{ price: 3333, priceMax: null }] });
   });
 });
