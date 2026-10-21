@@ -75,7 +75,8 @@
     "regionsHint": "Mata uang dan batas harga lama",
     "storesHint": "Jaringan, cabang, dan pasar",
     "account": "Akun",
-    "unknownBarcodesHint": "Barcode yang dipindai tapi belum ada"
+    "unknownBarcodesHint": "Barcode yang dipindai tapi belum ada",
+    "exportHint": "Unduh semua barang, toko, dan harga"
   },
   "Regions": {
     "title": "Wilayah",
@@ -241,5 +242,15 @@
     "empty": "Semua barcode yang dipindai sudah ada di database.",
     "scans": "{count, plural, other {dipindai # kali}}",
     "add": "Tambah"
+  },
+  "Export": {
+    "title": "Ekspor data",
+    "intro": "Semua data di perangkat ini, termasuk yang belum tersinkron. Harga ditulis sebagai angka bulat dalam satuan terkecil mata uangnya (rupiah untuk IDR), disertai kode mata uang dan angka yang dulu diketik.",
+    "csvTitle": "Spreadsheet (CSV)",
+    "csvHint": "File zip berisi items.csv, stores.csv, dan observations.csv. Bisa dibuka di Excel atau Google Sheets.",
+    "csv": "Unduh CSV (zip)",
+    "jsonTitle": "JSON",
+    "jsonHint": "Satu file berisi semua data persis seperti disimpan, untuk cadangan atau diolah program lain.",
+    "json": "Unduh JSON"
   }
 }
