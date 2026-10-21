@@ -42,4 +42,5 @@ With `DATABASE_URL` empty, the server uses an embedded PGlite database on disk, 
 1. Import the GitHub repo in Vercel.
 2. Add a Neon Postgres database from the Vercel Marketplace (sets `DATABASE_URL`).
 3. Set `BETTER_AUTH_SECRET` (random, 32+ chars) and `BETTER_AUTH_URL` (the production URL).
-4. Put Neon's `DATABASE_URL` into your local `.env` temporarily, then run `pnpm db:migrate` and `pnpm user:create <email> <password>` with your real credentials. Clear `DATABASE_URL` again afterwards to go back to the local database.
+4. Create a Blob store (Storage → Blob) and connect it to the project, for product photos. Locally, photos are kept in `.data/photos` instead.
+5. Put Neon's `DATABASE_URL` into your local `.env` temporarily, then run `pnpm db:migrate` and `pnpm user:create <email> <password>` with your real credentials. Clear `DATABASE_URL` again afterwards to go back to the local database.

@@ -13,6 +13,19 @@ export type SyncedTable = (typeof SYNCED_TABLES)[number];
 export type OutboxEntry = { id: string; table: SyncedTable; recordId: string; createdAt: string };
 export type SettingRecord = { key: string; value: unknown };
 
+/**
+ * A photo's bytes on this device. `image` is kept only until it is uploaded;
+ * `thumb` stays for offline display. `pending` is 1 until uploaded (booleans
+ * cannot be indexed).
+ */
+export type PhotoRecord = {
+  id: string;
+  itemId: string;
+  image: ArrayBuffer | null;
+  thumb: ArrayBuffer | null;
+  pending: 0 | 1;
+};
+
 export class HarganaStorage extends Dexie {
   items!: EntityTable<Item, "id">;
   outbox!: EntityTable<OutboxEntry, "id">;
@@ -22,6 +35,7 @@ export class HarganaStorage extends Dexie {
   categories!: EntityTable<Category, "id">;
   settings!: EntityTable<SettingRecord, "key">;
   observations!: EntityTable<PriceObservation, "id">;
+  photos!: EntityTable<PhotoRecord, "id">;
 
   constructor(name = "hargana") {
     super(name);
@@ -45,6 +59,9 @@ export class HarganaStorage extends Dexie {
       observations: "id, itemId, [itemId+regionId], observedAt",
     });
     this.version(5).upgrade(enqueueExisting);
+    this.version(6).stores({
+      photos: "id, itemId, pending",
+    });
     this.on("populate", seed);
   }
 

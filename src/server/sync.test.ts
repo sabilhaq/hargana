@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { emptyRecords, type HarganaCore, type PullResponse } from "@/core";
 import { testCore } from "@/core/testing";
 import { testServer } from "./testing";
@@ -19,6 +19,9 @@ async function pullAll(call: Awaited<ReturnType<typeof testServer>>["call"], reg
 }
 
 const ids = (records: { id: string }[]) => records.map((r) => r.id).sort();
+
+// Starting the in-memory Postgres takes a while; do it before the timed tests.
+beforeAll(() => testServer(), 60_000);
 
 describe("push", () => {
   it("changes nothing when the same batch is pushed twice", async () => {

@@ -66,6 +66,22 @@ export type CoreContext = {
 export const PRICING_UNITS = ["kg", "g", "ons", "l", "ml", "pcs", "butir", "ikat", "bungkus", "sisir", "papan"] as const;
 export type PricingUnit = (typeof PRICING_UNITS)[number];
 
+/**
+ * An item's photo. Its URLs are set once the photo is uploaded; until then
+ * only the device that took it can show it.
+ */
+export type ItemPhoto = { id: string; imageUrl: string | null; thumbUrl: string | null };
+
+/** What the device knows of an item's photo: the thumbnail is kept for offline use. */
+export type PhotoView = {
+  /** JPEG bytes of the thumbnail, when on this device. */
+  thumb: ArrayBuffer | null;
+  /** JPEG bytes of the full image, until it is uploaded. */
+  image: ArrayBuffer | null;
+  imageUrl: string | null;
+  thumbUrl: string | null;
+};
+
 /** A non-barcoded item priced per unit, found by search (e.g. "Cabai rawit merah" per kg). */
 export type Commodity = {
   id: string;
@@ -75,6 +91,7 @@ export type Commodity = {
   aliases: string[];
   categoryId: string | null;
   pricingUnit: PricingUnit;
+  photo?: ItemPhoto;
   createdAt: string;
   updatedAt: string;
 };
@@ -95,6 +112,7 @@ export type Product = {
   sizeUnit?: SizeUnit;
   aliases: string[];
   categoryId: string | null;
+  photo?: ItemPhoto;
   createdAt: string;
   updatedAt: string;
 };
@@ -102,9 +120,9 @@ export type Product = {
 /** Anything in the catalog. */
 export type Item = Commodity | Product;
 
-export type CommodityInput = Omit<Commodity, "id" | "kind" | "createdAt" | "updatedAt"> & { id?: string };
+export type CommodityInput = Omit<Commodity, "id" | "kind" | "photo" | "createdAt" | "updatedAt"> & { id?: string };
 /** `barcode` may be in any valid EAN/UPC form; it is stored canonically. */
-export type ProductInput = Omit<Product, "id" | "kind" | "createdAt" | "updatedAt"> & { id?: string };
+export type ProductInput = Omit<Product, "id" | "kind" | "photo" | "createdAt" | "updatedAt"> & { id?: string };
 
 export type BarcodeFormat = "ean_13" | "ean_8" | "upc_a" | "upc_e";
 

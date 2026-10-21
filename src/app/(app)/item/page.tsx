@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useDescribeItem } from "../items/describe";
+import { ItemPhoto } from "../items/photo";
 import { Empty, Screen, useCoreData } from "../ui";
 import { PricePanel } from "./price-panel";
 
@@ -37,28 +38,31 @@ function ItemDetails() {
     <Screen title={item?.name ?? ""} back="/">
       {item && (
         <>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-            <dt className="opacity-60">{item.kind === "product" ? t("product") : t("commodity")}</dt>
-            <dd>{describe(item)}</dd>
-            {category && (
-              <>
-                <dt className="opacity-60">{t("category")}</dt>
-                <dd>{category.name}</dd>
-              </>
-            )}
-            {item.kind === "product" && (
-              <>
-                <dt className="opacity-60">{t("barcode")}</dt>
-                <dd className="font-mono">{item.barcode}</dd>
-              </>
-            )}
-            {item.aliases.length > 0 && (
-              <>
-                <dt className="opacity-60">{t("aliases")}</dt>
-                <dd>{item.aliases.join(", ")}</dd>
-              </>
-            )}
-          </dl>
+          <div className="flex items-start gap-4">
+            <dl className="grid flex-1 grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+              <dt className="opacity-60">{item.kind === "product" ? t("product") : t("commodity")}</dt>
+              <dd>{describe(item)}</dd>
+              {category && (
+                <>
+                  <dt className="opacity-60">{t("category")}</dt>
+                  <dd>{category.name}</dd>
+                </>
+              )}
+              {item.kind === "product" && (
+                <>
+                  <dt className="opacity-60">{t("barcode")}</dt>
+                  <dd className="font-mono">{item.barcode}</dd>
+                </>
+              )}
+              {item.aliases.length > 0 && (
+                <>
+                  <dt className="opacity-60">{t("aliases")}</dt>
+                  <dd>{item.aliases.join(", ")}</dd>
+                </>
+              )}
+            </dl>
+            <ItemPhoto itemId={item.id} version={item.updatedAt} />
+          </div>
           <PricePanel item={item} />
           <Link
             href={`/items/edit?id=${item.id}`}

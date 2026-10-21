@@ -221,5 +221,16 @@
     "offline": "Offline · {count, plural, other {# menunggu}}",
     "retry": "Ketuk untuk sinkron sekarang",
     "signedOut": "Masuk lagi untuk sinkron"
+  },
+  "Photos": {
+    "label": "Foto (boleh dilewati)",
+    "take": "Ambil foto",
+    "change": "Ganti foto",
+    "remove": "Hapus foto",
+    "processing": "Memproses foto…",
+    "failed": "Foto tidak bisa dibaca. Coba foto lain.",
+    "title": "Foto",
+    "view": "Lihat foto",
+    "offline": "Foto penuh tampil saat online."
   }
 }

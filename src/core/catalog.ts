@@ -38,6 +38,7 @@ export function catalog(storage: HarganaStorage, clock: Clock) {
       name,
       aliases: cleanAliases(input.aliases, name),
       categoryId: input.categoryId || null,
+      ...(existing?.photo && { photo: existing.photo }),
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };
