@@ -1,7 +1,18 @@
 import type { Clock } from "./clock";
 import { CoreError } from "./errors";
 import type { HarganaStorage } from "./storage";
-import type { EntryUnit, Item, ItemPrices, PriceEntry, PriceObservation, Store, StorePrice } from "./types";
+import type {
+  Chain,
+  ChainPrice,
+  EntryUnit,
+  Item,
+  ItemPrices,
+  PriceEntry,
+  PriceObservation,
+  PriceRow,
+  Store,
+  StorePrice,
+} from "./types";
 import { perUnitPrice } from "./units";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -10,6 +21,47 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export function priceUnit(item: Item): EntryUnit {
   return item.kind === "commodity" ? item.pricingUnit : "pcs";
 }
+
+/**
+ * Each store's current price, by the current-price rules:
+ * - market: the latest market-scope observation at that market;
+ * - branch: whichever is newer, its latest branch-scope observation or its
+ *   chain's latest chain-scope observation.
+ */
+function resolveStores(observations: PriceObservation[], stores: Store[]) {
+  const market = latestBy(observations, "market", (o) => o.storeId);
+  const branch = latestBy(observations, "branch", (o) => o.storeId);
+  const chain = latestBy(observations, "chain", (o) => o.chainId!);
+
+  const resolved = new Map<string, PriceObservation>();
+  for (const store of stores) {
+    const observation =
+      store.type === "traditional_market"
+        ? market.get(store.id)
+        : newer(branch.get(store.id), store.chainId ? chain.get(store.chainId) : undefined);
+    if (observation) resolved.set(store.id, observation);
+  }
+  return { resolved, chainLatest: chain };
+}
+
+function latestBy(observations: PriceObservation[], scope: PriceObservation["scope"], key: (o: PriceObservation) => string) {
+  const latest = new Map<string, PriceObservation>();
+  for (const observation of observations) {
+    if (observation.scope !== scope) continue;
+    const current = latest.get(key(observation));
+    if (!current || observation.observedAt > current.observedAt) latest.set(key(observation), observation);
+  }
+  return latest;
+}
+
+function newer(a?: PriceObservation, b?: PriceObservation) {
+  if (!a) return b;
+  if (!b) return a;
+  return b.observedAt > a.observedAt ? b : a;
+}
+
+const samePrice = (a: { price: number; priceMax: number | null }, b: { price: number; priceMax: number | null }) =>
+  a.price === b.price && a.priceMax === b.priceMax;
 
 export function prices(
   storage: HarganaStorage,
@@ -22,40 +74,54 @@ export function prices(
     return item;
   }
 
+  async function mustStore() {
+    const { currentStore } = await context();
+    if (!currentStore) throw new CoreError("no_current_store");
+    return currentStore;
+  }
+
+  async function observationsAt(itemId: string, regionId: string) {
+    return storage.observations.where({ itemId, regionId }).toArray();
+  }
+
+  /** The observation that gives `store` its current price, if any. */
+  async function currentAt(itemId: string, store: Store) {
+    const observations = await observationsAt(itemId, store.regionId);
+    return resolveStores(observations, [store]).resolved.get(store.id);
+  }
+
   return {
     /**
      * Records a price seen at the current store as a new observation. The
      * per-unit price is computed here; the typed amount, quantity and unit are
-     * kept as entered.
+     * kept as entered. At a branch it applies to that branch only unless
+     * `scope` is "chain".
      */
     async recordPrice(entry: PriceEntry): Promise<PriceObservation> {
-      const { currentStore: store } = await context();
-      if (!store) throw new CoreError("no_current_store");
+      const store = await mustStore();
       const item = await mustItem(entry.itemId);
+      const isMarket = store.type === "traditional_market";
       if (!Number.isInteger(entry.amount) || entry.amount <= 0) throw new CoreError("invalid", "amount must be a positive integer");
       if (!(entry.qty > 0)) throw new CoreError("invalid", "quantity must be positive");
       const amountMax = entry.amountMax || null;
       if (amountMax !== null && (!Number.isInteger(amountMax) || amountMax < entry.amount)) {
         throw new CoreError("invalid", "the top of a range must not be below its bottom");
       }
-      if (amountMax !== null && store.type !== "traditional_market") {
-        throw new CoreError("invalid", "only market prices can be a range");
-      }
+      if (amountMax !== null && !isMarket) throw new CoreError("invalid", "only market prices can be a range");
+      if (entry.scope === "chain" && isMarket) throw new CoreError("invalid", "a market has no chain");
 
       const unit = priceUnit(item);
       const price = perUnitPrice(entry.amount, entry.qty, entry.unit, unit);
       if (price === null) throw new CoreError("incompatible_unit");
       const priceMax = amountMax === null ? null : perUnitPrice(amountMax, entry.qty, entry.unit, unit);
+      const scope = isMarket ? "market" : (entry.scope ?? "branch");
 
-      const previous = await storage.observations
-        .where({ itemId: item.id })
-        .filter((o) => o.storeId === store.id)
-        .count();
+      const previous = await currentAt(item.id, store);
       const observation: PriceObservation = {
         id: crypto.randomUUID(),
         itemId: item.id,
         regionId: store.regionId,
-        scope: store.type === "traditional_market" ? "market" : "branch",
+        scope,
         chainId: store.chainId,
         storeId: store.id,
         action: previous ? "change" : "new",
@@ -74,6 +140,32 @@ export function prices(
       return observation;
     },
 
+    /**
+     * "Sama ✓": the price shown for the current store is still right. Adds a
+     * confirm observation at that same price for this store (a branch, even
+     * when the price came from its chain), so we know it was checked.
+     */
+    async confirmPrice(itemId: string): Promise<PriceObservation> {
+      const store = await mustStore();
+      await mustItem(itemId);
+      const shown = await currentAt(itemId, store);
+      if (!shown) throw new CoreError("no_price");
+      const observation: PriceObservation = {
+        ...shown,
+        id: crypto.randomUUID(),
+        scope: store.type === "traditional_market" ? "market" : "branch",
+        chainId: store.chainId,
+        storeId: store.id,
+        action: "confirm",
+        note: null,
+        source: "collector",
+        verified: true,
+        observedAt: clock.now().toISOString(),
+      };
+      await storage.observations.add(observation);
+      return observation;
+    },
+
     /** Every observation of an item, newest first. */
     async listObservations(itemId: string) {
       const observations = await storage.observations.where({ itemId }).toArray();
@@ -81,49 +173,87 @@ export function prices(
     },
 
     /**
-     * The current price of an item at every store in the active region that
-     * has one, cheapest first (ranges by their low end).
+     * The item's prices in the active region, cheapest first (ranges by their
+     * low end). Markets and lone branches are one row each; a chain with a
+     * chain price or several priced branches is one row holding its branches.
      */
     async itemPrices(itemId: string): Promise<ItemPrices> {
       const item = await mustItem(itemId);
-      const regionId = (await context()).activeRegion.id;
+      const { activeRegion, currentStore } = await context();
+      const regionId = activeRegion.id;
       const [region, observations, stores, chains] = await Promise.all([
         storage.regions.get(regionId),
-        storage.observations.where({ itemId, regionId }).toArray(),
+        observationsAt(itemId, regionId),
         storage.stores.where({ regionId }).toArray(),
         storage.chains.where({ regionId }).toArray(),
       ]);
-      const storeById = new Map(stores.map((s) => [s.id, s]));
       const chainById = new Map(chains.map((c) => [c.id, c]));
-
-      // The latest observation per store is its current price.
-      const latest = new Map<string, PriceObservation>();
-      for (const observation of observations) {
-        const current = latest.get(observation.storeId);
-        if (!current || observation.observedAt > current.observedAt) latest.set(observation.storeId, observation);
-      }
-
+      const { resolved, chainLatest } = resolveStores(observations, stores);
       const now = clock.now().getTime();
-      const result: StorePrice[] = [];
-      for (const observation of latest.values()) {
-        const store = storeById.get(observation.storeId);
-        if (!store) continue;
+
+      const age = (observation: PriceObservation, type: Store["type"]) => {
         const ageDays = Math.floor((now - new Date(observation.observedAt).getTime()) / DAY_MS);
-        const threshold = store.type === "traditional_market" ? region!.staleDaysMarket : region!.staleDaysSupermarket;
-        result.push({
-          store,
-          chain: store.chainId ? (chainById.get(store.chainId) ?? null) : null,
+        const threshold = type === "traditional_market" ? region!.staleDaysMarket : region!.staleDaysSupermarket;
+        return { ageDays, stale: ageDays > threshold };
+      };
+      const storePrice = (store: Store, observation: PriceObservation): StorePrice => ({
+        store,
+        chain: store.chainId ? (chainById.get(store.chainId) ?? null) : null,
+        price: observation.price,
+        priceMax: observation.priceMax,
+        note: observation.note,
+        observedAt: observation.observedAt,
+        ...age(observation, store.type),
+        fromChain: observation.scope === "chain",
+        observation,
+      });
+      const byPrice = (a: { price: number }, b: { price: number }) => a.price - b.price;
+
+      const hereObservation = currentStore && resolved.get(currentStore.id);
+      const here = hereObservation ? storePrice(currentStore, hereObservation) : null;
+
+      const rows: PriceRow[] = [];
+      const branchesByChain = new Map<string, StorePrice[]>();
+      for (const store of stores) {
+        const observation = resolved.get(store.id);
+        if (!observation) continue;
+        const price = storePrice(store, observation);
+        if (store.type === "branch" && store.chainId) {
+          branchesByChain.set(store.chainId, [...(branchesByChain.get(store.chainId) ?? []), price]);
+        } else {
+          rows.push({ kind: "store", ...price });
+        }
+      }
+      for (const [chainId, branches] of branchesByChain) {
+        const chainObservation = chainLatest.get(chainId);
+        if (!chainObservation && branches.length === 1) {
+          rows.push({ kind: "store", ...branches[0] });
+          continue;
+        }
+        branches.sort((a, b) => byPrice(a, b) || a.store.name.localeCompare(b.store.name));
+        rows.push({ kind: "chain", ...chainRow(chainById.get(chainId)!, chainObservation ?? branches[0].observation, branches) });
+      }
+      rows.sort((a, b) => byPrice(a, b) || rowName(a).localeCompare(rowName(b)));
+      return { region: region!, unit: priceUnit(item), rows, here };
+
+      function chainRow(chain: Chain, observation: PriceObservation, branches: StorePrice[]): ChainPrice {
+        return {
+          chain,
           price: observation.price,
           priceMax: observation.priceMax,
           note: observation.note,
           observedAt: observation.observedAt,
-          ageDays,
-          stale: ageDays > threshold,
+          ...age(observation, "branch"),
           observation,
-        });
+          branches,
+          varies: branches.some((b) => !samePrice(b, branches[0])),
+        };
       }
-      result.sort((a, b) => a.price - b.price || a.store.name.localeCompare(b.store.name));
-      return { region: region!, unit: priceUnit(item), prices: result };
     },
   };
 }
+
+function rowName(row: PriceRow) {
+  return row.kind === "chain" ? row.chain.name : row.store.name;
+}
+

@@ -44,7 +44,8 @@
     "invalid_barcode": "Kode barcode tidak valid.",
     "barcode_taken": "Kode barcode ini sudah dipakai barang lain.",
     "no_current_store": "Pilih dulu “Saya di” untuk mencatat harga.",
-    "incompatible_unit": "Satuan itu tidak bisa diubah ke satuan harga barang ini."
+    "incompatible_unit": "Satuan itu tidak bisa diubah ke satuan harga barang ini.",
+    "no_price": "Belum ada harga di toko ini untuk dikonfirmasi."
   },
   "StoreType": {
     "branch": "Cabang",
@@ -189,6 +190,16 @@
     "notePlaceholder": "Catatan (opsional), mis. kios dekat pintu",
     "equals": "= {price} per {unit}",
     "save": "Simpan harga",
-    "saved": "Harga tersimpan."
+    "hereAt": "Harga di {store}",
+    "same": "Sama ✓",
+    "change": "Ubah harga",
+    "confirmed": "Dikonfirmasi — harga masih sama.",
+    "chainPrice": "harga {chain}",
+    "branchPrice": "harga cabang ini",
+    "branches": "{count, plural, other {# cabang}}",
+    "varies": "berbeda di beberapa cabang",
+    "scope": "Berlaku untuk",
+    "thisBranch": "Cabang ini saja",
+    "wholeChain": "Seluruh {chain}"
   }
 }

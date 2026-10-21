@@ -158,6 +158,11 @@ export type PriceEntry = {
   qty: number;
   unit: EntryUnit;
   note?: string | null;
+  /**
+   * At a branch: "branch" (default) applies to this branch only, "chain" to
+   * every branch of its chain that has no newer price of its own.
+   */
+  scope?: "branch" | "chain";
 };
 
 /** The current price of an item at one store. */
@@ -172,13 +177,29 @@ export type StorePrice = {
   ageDays: number;
   /** Older than the region's threshold for this kind of store. */
   stale: boolean;
+  /** The branch has no newer price of its own, so the chain price applies. */
+  fromChain: boolean;
   observation: PriceObservation;
 };
+
+/** A chain's price, with what each of its branches resolves to. */
+export type ChainPrice = Omit<StorePrice, "store" | "chain" | "fromChain"> & {
+  chain: Chain;
+  /** Branches with a known price, cheapest first. */
+  branches: StorePrice[];
+  /** Branches do not all have the same price ("berbeda di beberapa cabang"). */
+  varies: boolean;
+};
+
+/** One line of the result screen: a single store, or a chain and its branches. */
+export type PriceRow = ({ kind: "store" } & StorePrice) | ({ kind: "chain" } & ChainPrice);
 
 export type ItemPrices = {
   region: Region;
   /** The unit `price` is per: the pricing unit for commodities, "pcs" for products. */
   unit: EntryUnit;
   /** Cheapest first (by the low end of ranges). */
-  prices: StorePrice[];
+  rows: PriceRow[];
+  /** The current store's price, when a store is set and has one. */
+  here: StorePrice | null;
 };
