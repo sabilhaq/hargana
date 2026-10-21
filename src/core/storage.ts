@@ -1,9 +1,9 @@
 import Dexie, { type EntityTable, type Transaction } from "dexie";
 import { SEEDED_AT, seedCategories, seedRegions } from "./seed";
-import type { Category, Chain, Item, PriceObservation, Region, Store } from "./types";
+import type { Category, Chain, Item, PriceObservation, Region, Store, UnknownBarcodeScan } from "./types";
 
 /** Tables whose records are pushed to and pulled from the server. */
-export const SYNCED_TABLES = ["regions", "categories", "chains", "stores", "items", "observations"] as const;
+export const SYNCED_TABLES = ["regions", "categories", "chains", "stores", "items", "observations", "unknownBarcodes"] as const;
 export type SyncedTable = (typeof SYNCED_TABLES)[number];
 
 /**
@@ -36,6 +36,7 @@ export class HarganaStorage extends Dexie {
   settings!: EntityTable<SettingRecord, "key">;
   observations!: EntityTable<PriceObservation, "id">;
   photos!: EntityTable<PhotoRecord, "id">;
+  unknownBarcodes!: EntityTable<UnknownBarcodeScan, "id">;
 
   constructor(name = "hargana") {
     super(name);
@@ -62,6 +63,9 @@ export class HarganaStorage extends Dexie {
     this.version(6).stores({
       photos: "id, itemId, pending",
     });
+    this.version(7).stores({
+      unknownBarcodes: "id, barcode, scannedAt",
+    });
     this.on("populate", seed);
   }
 
@@ -82,7 +86,8 @@ export function outboxEntry(table: SyncedTable, recordId: string, createdAt: str
 /** Data recorded before sync existed is queued so it reaches the server too; seeds are not. */
 async function enqueueExisting(tx: Transaction) {
   const now = new Date().toISOString();
-  for (const table of SYNCED_TABLES) {
+  // The tables that existed in version 5; later ones were empty then.
+  for (const table of ["regions", "categories", "chains", "stores", "items", "observations"] as const) {
     const records: { id: string; updatedAt?: string }[] = await tx.table(table).toArray();
     const changed = records.filter((r) => r.updatedAt !== SEEDED_AT);
     await tx.table("outbox").bulkPut(changed.map((r) => outboxEntry(table, r.id, now)));

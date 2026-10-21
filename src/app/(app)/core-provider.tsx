@@ -2,11 +2,12 @@
 
 import { createContext, use, useState, type ReactNode } from "react";
 import { createCore, type HarganaCore } from "@/core";
+import { httpProductMetadata } from "@/lib/product-metadata";
 
 const CoreContext = createContext<HarganaCore | null>(null);
 
 export function CoreProvider({ children }: { children: ReactNode }) {
-  const [core] = useState(() => createCore());
+  const [core] = useState(() => createCore({ metadata: httpProductMetadata }));
   return <CoreContext value={core}>{children}</CoreContext>;
 }
 

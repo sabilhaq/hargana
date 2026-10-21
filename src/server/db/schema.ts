@@ -94,6 +94,13 @@ export const observations = pgTable(
   (t) => [index().on(t.regionId, t.seq), index().on(t.itemId)],
 );
 
+/** Lookups of barcodes that were not in the catalog. Append-only. */
+export const unknownBarcodes = pgTable(
+  "unknown_barcodes",
+  { ...synced, regionId: text("region_id").notNull() },
+  (t) => [index().on(t.regionId, t.seq)],
+);
+
 /** Item ids a device pushed for a barcode the server already had under another id. */
 export const itemAliases = pgTable("item_aliases", {
   fromId: text("from_id").primaryKey(),

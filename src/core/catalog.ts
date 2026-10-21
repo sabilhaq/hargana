@@ -2,6 +2,7 @@ import Fuse from "fuse.js";
 import { parseBarcode } from "./barcode";
 import type { Clock } from "./clock";
 import { CoreError } from "./errors";
+import { activeRegion } from "./places";
 import type { HarganaStorage } from "./storage";
 import {
   PRICING_UNITS,
@@ -13,12 +14,15 @@ import {
   type ItemMatch,
   type Product,
   type ProductInput,
+  type ProductMetadata,
+  type ProductSuggestion,
+  type UnknownBarcode,
 } from "./types";
 
 /** How fuzzy search is: 0 matches exactly, 1 matches anything. */
 const SEARCH_THRESHOLD = 0.35;
 
-export function catalog(storage: HarganaStorage, clock: Clock) {
+export function catalog(storage: HarganaStorage, clock: Clock, metadata?: ProductMetadata) {
   async function withCategories(items: Item[]): Promise<ItemMatch[]> {
     const categories = new Map((await storage.categories.toArray()).map((c) => [c.id, c]));
     return items.map((item) => ({ item, category: (item.categoryId && categories.get(item.categoryId)) || null }));
@@ -88,13 +92,52 @@ export function catalog(storage: HarganaStorage, clock: Clock) {
 
     /**
      * Looks up a typed or scanned code. Validation happens here, not in the
-     * scanner: `scannedAs` is the symbology the camera reported, if any.
+     * scanner: `scannedAs` is the symbology the camera reported, if any. A
+     * valid code that is not in the catalog is logged so it can be added later.
      */
     async lookupBarcode(raw: string, scannedAs?: string): Promise<BarcodeLookup> {
       const parsed = parseBarcode(raw, scannedAs);
       if (!parsed.ok) return { status: "invalid", reason: parsed.reason };
       const item = await productByBarcode(parsed.barcode);
-      return item ? { status: "found", barcode: parsed.barcode, item } : { status: "unknown", barcode: parsed.barcode };
+      if (item) return { status: "found", barcode: parsed.barcode, item };
+      await storage.saveSynced("unknownBarcodes", {
+        id: crypto.randomUUID(),
+        barcode: parsed.barcode,
+        regionId: await activeRegion(storage),
+        scannedAt: clock.now().toISOString(),
+      });
+      return { status: "unknown", barcode: parsed.barcode };
+    },
+
+    /** Barcodes looked up but still not in the catalog, most recent first. */
+    async listUnknownBarcodes(): Promise<UnknownBarcode[]> {
+      const scans = await storage.unknownBarcodes.toArray();
+      const barcodes = [...new Set(scans.map((s) => s.barcode))];
+      const known = new Set(await storage.items.where("barcode").anyOf(barcodes).keys());
+      const byBarcode = new Map<string, UnknownBarcode>();
+      for (const { barcode, scannedAt } of scans) {
+        if (known.has(barcode)) continue;
+        const entry = byBarcode.get(barcode) ?? { barcode, count: 0, lastScannedAt: scannedAt };
+        entry.count++;
+        if (scannedAt > entry.lastScannedAt) entry.lastScannedAt = scannedAt;
+        byBarcode.set(barcode, entry);
+      }
+      return [...byBarcode.values()].sort((a, b) => b.lastScannedAt.localeCompare(a.lastScannedAt));
+    },
+
+    /**
+     * What an outside product database knows about a barcode, to pre-fill the
+     * add form. Null when offline, unknown there, or on any failure: adding by
+     * hand always works.
+     */
+    async suggestProduct(raw: string): Promise<ProductSuggestion | null> {
+      const parsed = parseBarcode(raw);
+      if (!parsed.ok || !metadata) return null;
+      try {
+        return await metadata.lookup(parsed.barcode);
+      } catch {
+        return null;
+      }
     },
 
     /** Items in a category (or all items), by name. */

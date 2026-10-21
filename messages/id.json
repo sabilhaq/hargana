@@ -74,7 +74,8 @@
     "data": "Data",
     "regionsHint": "Mata uang dan batas harga lama",
     "storesHint": "Jaringan, cabang, dan pasar",
-    "account": "Akun"
+    "account": "Akun",
+    "unknownBarcodesHint": "Barcode yang dipindai tapi belum ada"
   },
   "Regions": {
     "title": "Wilayah",
@@ -136,7 +137,9 @@
     "barcode": "Kode barcode",
     "brand": "Merek",
     "size": "Isi / ukuran",
-    "sizeUnit": "Satuan"
+    "sizeUnit": "Satuan",
+    "lookingUp": "Mencari info produk…",
+    "suggested": "Diisi dari Open Food Facts — periksa lagi sebelum menyimpan."
   },
   "Units": {
     "kg": "kg",
@@ -232,5 +235,11 @@
     "title": "Foto",
     "view": "Lihat foto",
     "offline": "Foto penuh tampil saat online."
+  },
+  "UnknownBarcodes": {
+    "title": "Barcode belum dikenal",
+    "empty": "Semua barcode yang dipindai sudah ada di database.",
+    "scans": "{count, plural, other {dipindai # kali}}",
+    "add": "Tambah"
   }
 }
