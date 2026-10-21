@@ -20,5 +20,92 @@
     "itemCount": "{count, plural, other {# barang}}",
     "pendingSync": "{count, plural, =0 {Semua tersimpan} other {# menunggu sinkron}}",
     "loading": "Memuat…"
+  },
+  "Common": {
+    "back": "Kembali",
+    "close": "Tutup",
+    "cancel": "Batal",
+    "save": "Simpan",
+    "saving": "Menyimpan…"
+  },
+  "Errors": {
+    "not_found": "Data tidak ditemukan.",
+    "branch_needs_chain": "Cabang harus punya jaringan toko.",
+    "market_has_no_chain": "Pasar tradisional tidak punya jaringan toko.",
+    "chain_in_other_region": "Jaringan toko itu ada di wilayah lain.",
+    "invalid": "Periksa kembali isian.",
+    "unknown": "Gagal menyimpan. Coba lagi."
+  },
+  "StoreType": {
+    "branch": "Cabang",
+    "traditional_market": "Pasar tradisional"
+  },
+  "StoreChip": {
+    "at": "Saya di: {name}",
+    "none": "Saya di: pilih toko"
+  },
+  "StorePicker": {
+    "title": "Saya di mana?",
+    "search": "Cari toko atau pasar",
+    "useLocation": "Tampilkan toko terdekat",
+    "locating": "Mencari lokasi…",
+    "locationDenied": "Lokasi tidak tersedia. Toko diurutkan menurut nama.",
+    "nearby": "Dekat",
+    "distance": "{km} km",
+    "notInStore": "Tidak sedang di toko",
+    "empty": "Belum ada toko. Tambahkan lewat “Kelola toko”.",
+    "noMatch": "Tidak ada toko yang cocok.",
+    "manage": "Kelola toko"
+  },
+  "Settings": {
+    "title": "Pengaturan",
+    "activeRegion": "Wilayah aktif",
+    "activeRegionHint": "Wilayah aktif otomatis mengikuti toko tempat kamu berada.",
+    "data": "Data",
+    "regionsHint": "Mata uang dan batas harga lama",
+    "storesHint": "Jaringan, cabang, dan pasar",
+    "account": "Akun"
+  },
+  "Regions": {
+    "title": "Wilayah",
+    "add": "Tambah wilayah",
+    "edit": "Ubah wilayah",
+    "name": "Nama",
+    "countryCode": "Negara",
+    "currency": "Mata uang",
+    "locale": "Locale",
+    "staleMarket": "Harga pasar dianggap lama setelah (hari)",
+    "staleSupermarket": "Harga supermarket dianggap lama setelah (hari)",
+    "summary": "{currency} · pasar {market} hari · supermarket {supermarket} hari"
+  },
+  "Stores": {
+    "title": "Toko & pasar",
+    "region": "Wilayah",
+    "stores": "Toko",
+    "addStore": "Tambah toko",
+    "editStore": "Ubah toko",
+    "noStores": "Belum ada toko di wilayah ini.",
+    "chains": "Jaringan toko",
+    "addChain": "Tambah jaringan",
+    "editChain": "Ubah jaringan",
+    "chainName": "Nama jaringan",
+    "noChains": "Belum ada jaringan toko (mis. Yomart).",
+    "chooseChain": "Pilih jaringan",
+    "type": "Jenis",
+    "chain": "Jaringan",
+    "name": "Nama",
+    "address": "Alamat",
+    "location": "Lokasi",
+    "useHere": "Pakai lokasi saat ini",
+    "locating": "Mencari lokasi…",
+    "clearLocation": "Hapus lokasi",
+    "locationHint": "Simpan lokasi saat berada di toko agar toko ini muncul sebagai toko terdekat."
+  },
+  "Categories": {
+    "title": "Kategori",
+    "add": "Tambah kategori",
+    "edit": "Ubah kategori",
+    "name": "Nama",
+    "sortOrder": "Urutan"
   }
 }

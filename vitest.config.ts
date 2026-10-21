@@ -3,5 +3,6 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
-  test: { include: ["src/**/*.test.ts"], environment: "node" },
+  // IndexedDB must exist before Dexie is imported.
+  test: { include: ["src/**/*.test.ts"], environment: "node", setupFiles: ["fake-indexeddb/auto"] },
 });

@@ -1,4 +1,3 @@
-import "fake-indexeddb/auto";
 import { createCore } from ".";
 import type { Clock } from "./clock";
 import { HarganaStorage } from "./storage";
@@ -16,9 +15,16 @@ export function fakeClock(start = "2026-01-01T08:00:00+07:00"): FakeClock {
 
 let counter = 0;
 
-/** A core over a fresh in-memory database and a controllable clock. */
+/**
+ * A core over a fresh in-memory database and a controllable clock.
+ * `restart()` gives a new core over the same database, like reopening the app.
+ */
 export function testCore() {
-  const storage = new HarganaStorage(`hargana-test-${++counter}`);
+  const name = `hargana-test-${++counter}`;
   const clock = fakeClock();
-  return { core: createCore({ storage, clock }), storage, clock };
+  return {
+    core: createCore({ storage: new HarganaStorage(name), clock }),
+    clock,
+    restart: () => createCore({ storage: new HarganaStorage(name), clock }),
+  };
 }

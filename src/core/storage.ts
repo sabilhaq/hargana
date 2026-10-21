@@ -1,12 +1,20 @@
-import Dexie, { type EntityTable } from "dexie";
+import Dexie, { type EntityTable, type Transaction } from "dexie";
+import { seedCategories, seedRegions } from "./seed";
+import type { Category, Chain, Region, Store } from "./types";
 
-// Minimal on-device tables; later tickets add stores, observations, etc.
+// Items are filled in by later tickets (commodities, products).
 export type ItemRecord = { id: string; barcode?: string; name: string };
 export type OutboxEntry = { id: string; createdAt: string };
+export type SettingRecord = { key: string; value: unknown };
 
 export class HarganaStorage extends Dexie {
   items!: EntityTable<ItemRecord, "id">;
   outbox!: EntityTable<OutboxEntry, "id">;
+  regions!: EntityTable<Region, "id">;
+  chains!: EntityTable<Chain, "id">;
+  stores!: EntityTable<Store, "id">;
+  categories!: EntityTable<Category, "id">;
+  settings!: EntityTable<SettingRecord, "key">;
 
   constructor(name = "hargana") {
     super(name);
@@ -14,5 +22,20 @@ export class HarganaStorage extends Dexie {
       items: "id, barcode",
       outbox: "id, createdAt",
     });
+    this.version(2)
+      .stores({
+        regions: "id",
+        chains: "id, regionId",
+        stores: "id, regionId, chainId",
+        categories: "id, sortOrder",
+        settings: "key",
+      })
+      .upgrade(seed);
+    this.on("populate", seed);
   }
+}
+
+async function seed(tx: Transaction) {
+  await tx.table("regions").bulkPut(seedRegions);
+  await tx.table("categories").bulkPut(seedCategories);
 }

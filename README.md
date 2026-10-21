@@ -27,7 +27,8 @@ With `DATABASE_URL` empty, the server uses an embedded PGlite database on disk, 
 
 ## Architecture
 
-- **Hargana core** (`src/core`): the only interface the UI uses. Reads and writes on-device storage (Dexie/IndexedDB) with an injected clock. The server is reached only through sync (#11).
+- **Hargana core** (`src/core`): the only interface the UI uses. Reads and writes on-device storage (Dexie/IndexedDB) with an injected clock. The server is reached only through sync (#11). First run seeds Kabupaten Garut and the default categories (fixed ids, so devices agree).
+- **Screens** (`src/app/(app)`): client components that talk to the core via `useCoreData`; shared building blocks live in `ui.tsx`.
 - **Server** (`src/server`): Better Auth (email + password, 90-day session, no sign-up) on Postgres via Drizzle — Neon in production, PGlite locally.
 - **Proxy** (`src/proxy.ts`): redirects requests without a session cookie to `/login`. API routes verify the session themselves.
 - **PWA** (`public/sw.js`, `src/app/manifest.ts`): installable; the service worker (production builds only) keeps every route in `APP_ROUTES` and its assets cached so the app opens offline. Pages are network-first, hashed assets cache-first. The worker is registered as `/sw.js?v=<build id>`, so each deploy installs a fresh cache. Add new screens to `APP_ROUTES`. Icons come from `pnpm tsx scripts/make-icons.tsx`.
