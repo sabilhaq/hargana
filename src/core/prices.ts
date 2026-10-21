@@ -4,6 +4,7 @@ import type { HarganaStorage } from "./storage";
 import type {
   Chain,
   ChainPrice,
+  Elsewhere,
   EntryUnit,
   Item,
   ItemPrices,
@@ -16,6 +17,21 @@ import type {
 import { perUnitPrice } from "./units";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const LOWEST_WINDOW_DAYS = 90;
+
+/** The calendar day on the device, YYYY-MM-DD. */
+function localDay(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** An observation's price today: its promo price while the promo runs (through its last day). */
+function effective(observation: PriceObservation, today: string) {
+  const { promoPrice, promoUntil } = observation;
+  return promoPrice != null && promoUntil && promoUntil >= today
+    ? { price: promoPrice, regularPrice: observation.price, promoUntil }
+    : { price: observation.price, regularPrice: observation.price, promoUntil: null };
+}
 
 /** The unit an item's prices are kept per. */
 export function priceUnit(item: Item): EntryUnit {
@@ -109,6 +125,16 @@ export function prices(
       }
       if (amountMax !== null && !isMarket) throw new CoreError("invalid", "only market prices can be a range");
       if (entry.scope === "chain" && isMarket) throw new CoreError("invalid", "a market has no chain");
+      const promoAmount = entry.promoAmount || null;
+      if (promoAmount !== null) {
+        if (!Number.isInteger(promoAmount) || promoAmount <= 0 || promoAmount >= entry.amount) {
+          throw new CoreError("invalid", "a promo price must be a whole amount below the regular price");
+        }
+        if (amountMax !== null) throw new CoreError("invalid", "a range cannot have a promo");
+        if (!entry.promoUntil || !/^\d{4}-\d{2}-\d{2}$/.test(entry.promoUntil) || entry.promoUntil < localDay(clock.now())) {
+          throw new CoreError("invalid", "a promo needs an end date that is not in the past");
+        }
+      }
 
       const unit = priceUnit(item);
       const price = perUnitPrice(entry.amount, entry.qty, entry.unit, unit);
@@ -132,6 +158,8 @@ export function prices(
         enteredQty: entry.qty,
         enteredUnit: entry.unit,
         note: entry.note?.trim() || null,
+        promoPrice: promoAmount === null ? null : perUnitPrice(promoAmount, entry.qty, entry.unit, unit),
+        promoUntil: promoAmount === null ? null : entry.promoUntil!,
         source: "collector",
         verified: true,
         observedAt: clock.now().toISOString(),
@@ -190,6 +218,7 @@ export function prices(
       const chainById = new Map(chains.map((c) => [c.id, c]));
       const { resolved, chainLatest } = resolveStores(observations, stores);
       const now = clock.now().getTime();
+      const today = localDay(clock.now());
 
       const age = (observation: PriceObservation, type: Store["type"]) => {
         const ageDays = Math.floor((now - new Date(observation.observedAt).getTime()) / DAY_MS);
@@ -199,7 +228,7 @@ export function prices(
       const storePrice = (store: Store, observation: PriceObservation): StorePrice => ({
         store,
         chain: store.chainId ? (chainById.get(store.chainId) ?? null) : null,
-        price: observation.price,
+        ...effective(observation, today),
         priceMax: observation.priceMax,
         note: observation.note,
         observedAt: observation.observedAt,
@@ -234,12 +263,53 @@ export function prices(
         rows.push({ kind: "chain", ...chainRow(chainById.get(chainId)!, chainObservation ?? branches[0].observation, branches) });
       }
       rows.sort((a, b) => byPrice(a, b) || rowName(a).localeCompare(rowName(b)));
-      return { region: region!, unit: priceUnit(item), rows, here };
+
+      // Cheapest elsewhere: every other store, with a chain price shared by
+      // branches counted once under the chain's name. The chain price that
+      // applies here is not "elsewhere".
+      let cheapestElsewhere: Elsewhere | null = null;
+      const seen = new Set<string>();
+      for (const store of stores) {
+        const observation = resolved.get(store.id);
+        if (!observation || store.id === currentStore?.id) continue;
+        const sharedChainPrice = observation.scope === "chain";
+        const key = sharedChainPrice ? `chain:${observation.id}` : `store:${store.id}`;
+        if (seen.has(key) || (sharedChainPrice && here?.observation.id === observation.id)) continue;
+        seen.add(key);
+        const price = storePrice(store, observation);
+        if (cheapestElsewhere && price.price >= cheapestElsewhere.price) continue;
+        cheapestElsewhere = {
+          name: sharedChainPrice ? price.chain!.name : store.name,
+          chainId: sharedChainPrice ? store.chainId : null,
+          price: price.price,
+          priceMax: price.priceMax,
+          regularPrice: price.regularPrice,
+          promoUntil: price.promoUntil,
+          ageDays: price.ageDays,
+          stale: price.stale,
+          difference: here ? here.price - price.price : null,
+        };
+      }
+
+      // Lowest in 90 days: any observation in the region, at its promo price if it had one.
+      const since = new Date(now - LOWEST_WINDOW_DAYS * DAY_MS).toISOString();
+      const storeById = new Map(stores.map((st) => [st.id, st]));
+      let lowest90Days: ItemPrices["lowest90Days"] = null;
+      for (const observation of observations) {
+        const store = storeById.get(observation.storeId);
+        if (!store || observation.observedAt < since) continue;
+        const price = Math.min(observation.price, observation.promoPrice ?? Infinity);
+        if (!lowest90Days || price < lowest90Days.price || (price === lowest90Days.price && observation.observedAt > lowest90Days.observedAt)) {
+          lowest90Days = { price, observedAt: observation.observedAt, store };
+        }
+      }
+
+      return { region: region!, unit: priceUnit(item), rows, here, cheapestElsewhere, lowest90Days };
 
       function chainRow(chain: Chain, observation: PriceObservation, branches: StorePrice[]): ChainPrice {
         return {
           chain,
-          price: observation.price,
+          ...effective(observation, today),
           priceMax: observation.priceMax,
           note: observation.note,
           observedAt: observation.observedAt,
