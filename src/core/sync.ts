@@ -1,3 +1,4 @@
+import type { Clock } from "./clock";
 import { activeRegion } from "./places";
 import { SYNCED_TABLES, type HarganaStorage, type OutboxEntry } from "./storage";
 import type { Category, Chain, Item, PriceObservation, Region, Store } from "./types";
@@ -33,13 +34,20 @@ export type PushResponse = {
 export type PullRequest = { regionIds: string[]; cursor: number };
 export type PullResponse = SyncRecords & { cursor: number };
 
+/** A photo to upload: JPEG bytes of the image and its thumbnail. Uploading the same id again replaces it. */
+export type PhotoUpload = { id: string; image: ArrayBuffer; thumb: ArrayBuffer };
+export type PhotoUrls = { imageUrl: string; thumbUrl: string };
+
 /** How the device reaches the server. */
 export type SyncTransport = {
   push(request: PushRequest): Promise<PushResponse>;
   pull(request: PullRequest): Promise<PullResponse>;
+  uploadPhoto(photo: PhotoUpload): Promise<PhotoUrls>;
+  /** Fetches a photo by the URL the server gave for it. */
+  download(url: string): Promise<ArrayBuffer>;
 };
 
-export type SyncReport = { pushed: number; pulled: number };
+export type SyncReport = { photos: number; pushed: number; pulled: number };
 
 /** Records sent per push request. */
 const PUSH_BATCH = 200;
@@ -50,8 +58,45 @@ export function emptyRecords(): SyncRecords {
   return { regions: [], categories: [], chains: [], stores: [], items: [], observations: [] };
 }
 
-export function sync(storage: HarganaStorage) {
+export function sync(storage: HarganaStorage, clock: Clock) {
   let running: Promise<SyncReport> | null = null;
+
+  /** Uploads photos taken on this device, then gives their items the URLs. */
+  async function uploadPhotos(transport: SyncTransport) {
+    const pending = await storage.photos.where("pending").equals(1).toArray();
+    for (const photo of pending) {
+      const urls = await transport.uploadPhoto({ id: photo.id, image: photo.image!, thumb: photo.thumb! });
+      const item = await storage.items.get(photo.itemId);
+      if (item?.photo?.id !== photo.id) {
+        // Replaced or removed while uploading.
+        await storage.photos.delete(photo.id);
+        continue;
+      }
+      await storage.saveSynced("items", { ...item, photo: { id: photo.id, ...urls }, updatedAt: clock.now().toISOString() });
+      await storage.photos.put({ ...photo, image: null, pending: 0 });
+    }
+    return pending.length;
+  }
+
+  /**
+   * Keeps a thumbnail on the device for every item photo, so they show offline.
+   * Best effort: a failed download is tried again on the next sync.
+   */
+  async function downloadThumbs(transport: SyncTransport) {
+    const items = await storage.items.filter((item) => !!item.photo).toArray();
+    const current = new Set(items.map((item) => item.photo!.id));
+    const stored = new Set(await storage.photos.toCollection().primaryKeys());
+    for (const { id: itemId, photo } of items) {
+      if (stored.has(photo!.id) || !photo!.thumbUrl) continue;
+      try {
+        const thumb = await transport.download(photo!.thumbUrl);
+        await storage.photos.put({ id: photo!.id, itemId, image: null, thumb, pending: 0 });
+      } catch {
+        // Offline or gone; next time.
+      }
+    }
+    await storage.photos.filter((p) => p.pending === 0 && !current.has(p.id)).delete();
+  }
 
   async function push(transport: SyncTransport) {
     let pushed = 0;
@@ -136,16 +181,18 @@ export function sync(storage: HarganaStorage) {
 
   return {
     /**
-     * Pushes what changed on this device, then pulls what changed elsewhere for
-     * the regions in use. Safe to call again at any time; overlapping calls
+     * Uploads new photos and pushes what changed on this device, then pulls
+     * what changed elsewhere for the regions in use and fetches thumbnails. Safe to call again at any time; overlapping calls
      * share one run.
      */
     sync(transport: SyncTransport): Promise<SyncReport> {
       running ??= (async () => {
         try {
+          const photos = await uploadPhotos(transport);
           const pushed = await push(transport);
           const pulled = await pull(transport);
-          return { pushed, pulled };
+          await downloadThumbs(transport);
+          return { photos, pushed, pulled };
         } finally {
           running = null;
         }

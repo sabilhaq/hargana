@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, type FormEvent, type ReactNode } from "react";
+import { Suspense, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import {
   PRICING_UNITS,
   SIZE_UNITS,
@@ -13,7 +13,9 @@ import {
   type Product,
   type SizeUnit,
 } from "@/core";
+import { compressPhoto, type CompressedPhoto } from "@/lib/photo";
 import { useCore } from "../../core-provider";
+import { ItemPhoto, useBytesUrl } from "../photo";
 import { Empty, Field, FormActions, FormError, inputClass, Screen, useCoreData, useSave } from "../../ui";
 
 // Add or edit an item. `?id=` edits; otherwise `?kind=product&barcode=` adds a
@@ -78,6 +80,28 @@ function ItemForm({
   const product = item?.kind === "product" ? item : undefined;
   const commodity = item?.kind === "commodity" ? item : undefined;
   const leave = () => (history.length > 1 ? router.back() : router.replace("/"));
+  // A new photo, "remove", or null to keep the current one.
+  const [photo, setPhoto] = useState<CompressedPhoto | "remove" | null>(null);
+  const [compressing, setCompressing] = useState(false);
+  const [photoFailed, setPhotoFailed] = useState(false);
+  const preview = useBytesUrl(photo && photo !== "remove" ? photo.thumb : null);
+  const [current] = useCoreData((core) => (item ? core.itemPhoto(item.id) : Promise.resolve(null)), [item?.id]);
+  const hasPhoto = photo === "remove" ? false : photo !== null || !!current;
+
+  async function pickPhoto(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setPhotoFailed(false);
+    setCompressing(true);
+    try {
+      setPhoto(await compressPhoto(file));
+    } catch {
+      setPhotoFailed(true);
+    } finally {
+      setCompressing(false);
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -101,6 +125,8 @@ function ItemForm({
               sizeUnit: text("sizeValue") ? (text("sizeUnit") as SizeUnit) : undefined,
             })
           : await core.saveCommodity({ ...common, pricingUnit: text("pricingUnit") as PricingUnit });
+      if (photo === "remove") await core.removeItemPhoto(saved.id);
+      else if (photo) await core.setItemPhoto(saved.id, photo);
     });
     if (ok && saved) router.replace(`/item?id=${saved.id}`);
   }
@@ -178,6 +204,33 @@ function ItemForm({
           )}
         </Field>
       )}
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium">{t("Photos.label")}</span>
+        <div className="flex items-center gap-3">
+          {preview ? (
+            /* eslint-disable-next-line @next/next/no-img-element -- a local object URL */
+            <img src={preview} alt="" className="size-24 rounded-xl border border-neutral-200 object-cover dark:border-neutral-800" />
+          ) : (
+            item && photo === null && <ItemPhoto itemId={item.id} />
+          )}
+          <div className="flex flex-col items-start gap-2">
+            <label className="cursor-pointer rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold dark:border-neutral-700">
+              {compressing ? t("Photos.processing") : hasPhoto ? t("Photos.change") : t("Photos.take")}
+              <input type="file" accept="image/*" onChange={pickPhoto} disabled={compressing} className="sr-only" />
+            </label>
+            {hasPhoto && (
+              <button
+                type="button"
+                onClick={() => setPhoto(current ? "remove" : null)}
+                className="text-sm text-red-700 dark:text-red-400"
+              >
+                {t("Photos.remove")}
+              </button>
+            )}
+          </div>
+        </div>
+        {photoFailed && <p className="text-sm text-red-700 dark:text-red-400">{t("Photos.failed")}</p>}
+      </div>
       <Field label={t("Items.category")}>
         {select(
           "categoryId",
@@ -202,7 +255,7 @@ function ItemForm({
       </Field>
       <p className="-mt-2 text-sm opacity-60">{t("Items.aliasesHint")}</p>
       <FormError error={error} />
-      <FormActions saving={saving} onCancel={leave} />
+      <FormActions saving={saving || compressing} onCancel={leave} />
     </form>
   );
 }

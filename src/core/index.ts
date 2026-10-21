@@ -1,6 +1,7 @@
 import { liveQuery } from "dexie";
 import { catalog } from "./catalog";
 import { systemClock, type Clock } from "./clock";
+import { photos } from "./photos";
 import { places } from "./places";
 import { prices } from "./prices";
 import { HarganaStorage } from "./storage";
@@ -15,7 +16,8 @@ export { PRICING_UNITS, SIZE_UNITS } from "./types";
 export type * from "./types";
 export { compatibleUnits, perUnitPrice } from "./units";
 export { emptyRecords } from "./sync";
-export type { PullRequest, PullResponse, PushRequest, PushResponse, SyncRecords, SyncReport, SyncTransport } from "./sync";
+export { MAX_PHOTO_BYTES, MAX_THUMB_BYTES } from "./photos";
+export type * from "./sync";
 
 export type CoreStatus = {
   itemCount: number;
@@ -34,8 +36,12 @@ export type CoreDeps = {
 export function createCore({ storage = new HarganaStorage(), clock = systemClock }: CoreDeps = {}) {
   const placesApi = places(storage, clock);
   async function status(): Promise<CoreStatus> {
-    const [itemCount, pendingSyncCount] = await Promise.all([storage.items.count(), storage.outbox.count()]);
-    return { itemCount, pendingSyncCount };
+    const [itemCount, changes, photoUploads] = await Promise.all([
+      storage.items.count(),
+      storage.outbox.count(),
+      storage.photos.where("pending").equals(1).count(),
+    ]);
+    return { itemCount, pendingSyncCount: changes + photoUploads };
   }
   return {
     status,
@@ -47,7 +53,8 @@ export function createCore({ storage = new HarganaStorage(), clock = systemClock
     ...placesApi,
     ...catalog(storage, clock),
     ...prices(storage, clock, placesApi.context),
-    ...sync(storage),
+    ...photos(storage, clock),
+    ...sync(storage, clock),
   };
 }
 
