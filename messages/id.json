@@ -42,7 +42,9 @@
     "invalid": "Periksa kembali isian.",
     "unknown": "Gagal menyimpan. Coba lagi.",
     "invalid_barcode": "Kode barcode tidak valid.",
-    "barcode_taken": "Kode barcode ini sudah dipakai barang lain."
+    "barcode_taken": "Kode barcode ini sudah dipakai barang lain.",
+    "no_current_store": "Pilih dulu “Saya di” untuk mencatat harga.",
+    "incompatible_unit": "Satuan itu tidak bisa diubah ke satuan harga barang ini."
   },
   "StoreType": {
     "branch": "Cabang",
@@ -134,8 +136,7 @@
     "barcode": "Kode barcode",
     "brand": "Merek",
     "size": "Isi / ukuran",
-    "sizeUnit": "Satuan",
-    "noPricesYet": "Belum ada harga yang dicatat."
+    "sizeUnit": "Satuan"
   },
   "Units": {
     "kg": "kg",
@@ -170,5 +171,24 @@
     "unavailable": "Kamera tidak tersedia. Ketik kodenya saja.",
     "notProduct": "Bukan kode produk",
     "unreadable": "Kode tidak terbaca, coba lagi"
+  },
+  "Prices": {
+    "title": "Harga di {region}",
+    "none": "Belum ada harga yang dicatat.",
+    "viewOnly": "Pilih “Saya di” di beranda untuk mencatat harga di toko itu.",
+    "here": "di sini",
+    "checked": "{days, plural, =0 {dicek hari ini} =1 {dicek kemarin} other {dicek # hari lalu}}",
+    "stale": "mungkin sudah berubah",
+    "recordAt": "Catat harga di {store}",
+    "amount": "Harga",
+    "from": "Dari",
+    "to": "Sampai",
+    "for": "Untuk",
+    "isRange": "Harga berkisar (beda-beda per kios)",
+    "note": "Catatan",
+    "notePlaceholder": "Catatan (opsional), mis. kios dekat pintu",
+    "equals": "= {price} per {unit}",
+    "save": "Simpan harga",
+    "saved": "Harga tersimpan."
   }
 }

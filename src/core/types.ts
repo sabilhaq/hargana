@@ -118,3 +118,67 @@ export type ItemMatch = {
   item: Item;
   category: Category | null;
 };
+
+/** Units a price can be entered in: any pricing or size unit. */
+export type EntryUnit = PricingUnit | SizeUnit;
+
+/**
+ * One dated record of a price seen at a store. Append-only: a new recording
+ * adds a new observation, it never edits an old one.
+ */
+export type PriceObservation = {
+  id: string;
+  itemId: string;
+  regionId: string;
+  scope: "chain" | "branch" | "market";
+  chainId: string | null;
+  storeId: string;
+  action: "new" | "confirm" | "change";
+  /** Integer minor units (IDR: rupiah) per pricing unit (commodities) or per item (products). */
+  price: number;
+  /** Top of a market range, same units as `price`. */
+  priceMax: number | null;
+  /** What was typed, e.g. Rp 18.000 for 500 g. */
+  enteredAmount: number;
+  enteredAmountMax: number | null;
+  enteredQty: number;
+  enteredUnit: EntryUnit;
+  note: string | null;
+  source: "collector" | "shopper";
+  verified: boolean;
+  observedAt: string;
+};
+
+/** A price as typed at the store: `amount` (minor units) for `qty` `unit`. */
+export type PriceEntry = {
+  itemId: string;
+  amount: number;
+  /** For a market range: the highest amount for the same quantity. */
+  amountMax?: number | null;
+  qty: number;
+  unit: EntryUnit;
+  note?: string | null;
+};
+
+/** The current price of an item at one store. */
+export type StorePrice = {
+  store: Store;
+  chain: Chain | null;
+  price: number;
+  priceMax: number | null;
+  note: string | null;
+  observedAt: string;
+  /** Whole days since it was checked. */
+  ageDays: number;
+  /** Older than the region's threshold for this kind of store. */
+  stale: boolean;
+  observation: PriceObservation;
+};
+
+export type ItemPrices = {
+  region: Region;
+  /** The unit `price` is per: the pricing unit for commodities, "pcs" for products. */
+  unit: EntryUnit;
+  /** Cheapest first (by the low end of ranges). */
+  prices: StorePrice[];
+};

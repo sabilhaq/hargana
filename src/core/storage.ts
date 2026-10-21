@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable, type Transaction } from "dexie";
 import { seedCategories, seedRegions } from "./seed";
-import type { Category, Chain, Item, Region, Store } from "./types";
+import type { Category, Chain, Item, PriceObservation, Region, Store } from "./types";
 
 export type OutboxEntry = { id: string; createdAt: string };
 export type SettingRecord = { key: string; value: unknown };
@@ -13,6 +13,7 @@ export class HarganaStorage extends Dexie {
   stores!: EntityTable<Store, "id">;
   categories!: EntityTable<Category, "id">;
   settings!: EntityTable<SettingRecord, "key">;
+  observations!: EntityTable<PriceObservation, "id">;
 
   constructor(name = "hargana") {
     super(name);
@@ -31,6 +32,9 @@ export class HarganaStorage extends Dexie {
       .upgrade(seed);
     this.version(3).stores({
       items: "id, barcode, categoryId",
+    });
+    this.version(4).stores({
+      observations: "id, itemId, [itemId+regionId], observedAt",
     });
     this.on("populate", seed);
   }
