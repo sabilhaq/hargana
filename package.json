@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=.env scripts/migrate.ts",
-    "user:create": "tsx --env-file-if-exists=.env scripts/create-user.ts"
+    "user:create": "tsx --env-file-if-exists=.env scripts/create-user.ts",
+    "user:password": "tsx --env-file-if-exists=.env scripts/set-password.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.10",
