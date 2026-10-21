@@ -40,7 +40,9 @@
     "market_has_no_chain": "Pasar tradisional tidak punya jaringan toko.",
     "chain_in_other_region": "Jaringan toko itu ada di wilayah lain.",
     "invalid": "Periksa kembali isian.",
-    "unknown": "Gagal menyimpan. Coba lagi."
+    "unknown": "Gagal menyimpan. Coba lagi.",
+    "invalid_barcode": "Kode barcode tidak valid.",
+    "barcode_taken": "Kode barcode ini sudah dipakai barang lain."
   },
   "StoreType": {
     "branch": "Cabang",
@@ -124,7 +126,16 @@
     "aliases": "Nama lain",
     "aliasesHint": "Pisahkan dengan koma. Nama lain ikut dicari, mis. “cabe”, “cengek”, atau “bawang beureum”.",
     "perUnit": "per {unit}",
-    "notFound": "Barang tidak ditemukan."
+    "notFound": "Barang tidak ditemukan.",
+    "title": "Barang",
+    "addProduct": "Tambah barang",
+    "product": "Barang kemasan",
+    "commodity": "Barang pasar",
+    "barcode": "Kode barcode",
+    "brand": "Merek",
+    "size": "Isi / ukuran",
+    "sizeUnit": "Satuan",
+    "noPricesYet": "Belum ada harga yang dicatat."
   },
   "Units": {
     "kg": "kg",
@@ -138,5 +149,16 @@
     "bungkus": "bungkus",
     "sisir": "sisir",
     "papan": "papan"
+  },
+  "Barcode": {
+    "title": "Ketik kode barcode",
+    "typeCode": "Ketik kode barcode",
+    "code": "Kode barcode (angka di bawah garis)",
+    "lookUp": "Cari",
+    "notFound": "Belum ada di database",
+    "add": "Tambah barang",
+    "invalid_not_product": "Bukan kode produk.",
+    "invalid_wrong_length": "Kode barcode harus 8, 12, atau 13 angka.",
+    "invalid_bad_check_digit": "Kode salah — periksa lagi angkanya."
   }
 }

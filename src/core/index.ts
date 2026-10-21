@@ -6,7 +6,7 @@ import { HarganaStorage } from "./storage";
 export type { Clock } from "./clock";
 export { CoreError, type CoreErrorCode } from "./errors";
 export { CURRENT_STORE_TTL_MS, NEARBY_KM } from "./places";
-export { PRICING_UNITS } from "./types";
+export { PRICING_UNITS, SIZE_UNITS } from "./types";
 export type * from "./types";
 
 export type CoreStatus = {

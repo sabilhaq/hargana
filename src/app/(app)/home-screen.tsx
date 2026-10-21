@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import type { ItemMatch } from "@/core";
+import { BarcodeSheet } from "./barcode-sheet";
+import { useDescribeItem } from "./items/describe";
 import { StorePicker } from "./store-picker";
 import { Empty, inputClass, List, Row, useCoreData } from "./ui";
 
@@ -81,6 +83,7 @@ function Catalog() {
     (core) => (categoryId ? core.listItems({ categoryId }) : Promise.resolve([])),
     [categoryId],
   );
+  const [typingCode, setTypingCode] = useState(false);
   const searching = query.trim() !== "";
   const category = categories?.find((c) => c.id === categoryId);
 
@@ -115,6 +118,14 @@ function Catalog() {
         aria-label={t("Home.search")}
         className={inputClass}
       />
+      <button
+        type="button"
+        onClick={() => setTypingCode(true)}
+        className="-mt-2 self-start py-1 text-sm font-semibold text-green-700 dark:text-green-500"
+      >
+        {t("Barcode.typeCode")}
+      </button>
+      <BarcodeSheet open={typingCode} onClose={() => setTypingCode(false)} />
 
       {searching ? (
         results?.length === 0 ? (
@@ -175,16 +186,16 @@ function Catalog() {
 }
 
 function ItemList({ matches }: { matches?: ItemMatch[] }) {
-  const t = useTranslations();
+  const describe = useDescribeItem();
   if (!matches) return null;
   return (
     <List>
       {matches.map(({ item, category }) => (
         <Row
           key={item.id}
-          href={`/items/edit?id=${item.id}`}
+          href={`/item?id=${item.id}`}
           title={item.name}
-          detail={[t("Items.perUnit", { unit: t(`Units.${item.pricingUnit}`) }), category?.name].filter(Boolean).join(" · ")}
+          detail={[describe(item), category?.name].filter(Boolean).join(" · ")}
         />
       ))}
     </List>
