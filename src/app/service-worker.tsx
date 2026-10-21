@@ -12,7 +12,9 @@ function warm() {
   const assets = performance
     .getEntriesByType("resource")
     .map((entry) => entry.name)
-    .filter((name) => name.startsWith(location.origin));
+    .filter((name) => name.startsWith(location.origin))
+    // The scanner's decoder for browsers without BarcodeDetector (iOS).
+    .concat(process.env.NEXT_PUBLIC_ZXING_WASM!);
   navigator.serviceWorker.controller?.postMessage({ type: "warm", routes: APP_ROUTES, assets });
 }
 

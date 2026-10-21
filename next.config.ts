@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import type { NextConfig } from "next";
 
 // Versions the service worker; a new value makes installed apps update.
@@ -13,7 +14,11 @@ function buildId() {
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
-  env: { NEXT_PUBLIC_BUILD_ID: buildId() },
+  env: {
+    NEXT_PUBLIC_BUILD_ID: buildId(),
+    // Where scripts/copy-zxing-wasm.mjs puts the decoder; cached for offline use.
+    NEXT_PUBLIC_ZXING_WASM: `/zxing/${JSON.parse(readFileSync("node_modules/zxing-wasm/package.json", "utf8")).version}/zxing_reader.wasm`,
+  },
   partialPrefetching: true,
   serverExternalPackages: ["@electric-sql/pglite"],
   async headers() {

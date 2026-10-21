@@ -43,3 +43,6 @@ next-env.d.ts
 
 # local embedded database
 /.data/
+
+# Copied from node_modules on install
+/public/zxing/

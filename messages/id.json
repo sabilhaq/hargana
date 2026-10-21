@@ -160,5 +160,15 @@
     "invalid_not_product": "Bukan kode produk.",
     "invalid_wrong_length": "Kode barcode harus 8, 12, atau 13 angka.",
     "invalid_bad_check_digit": "Kode salah — periksa lagi angkanya."
+  },
+  "Scanner": {
+    "start": "Nyalakan kamera",
+    "starting": "Menyalakan kamera…",
+    "hint": "Arahkan ke barcode",
+    "torch": "Senter",
+    "denied": "Akses kamera ditolak. Izinkan kamera di pengaturan browser, atau ketik kodenya.",
+    "unavailable": "Kamera tidak tersedia. Ketik kodenya saja.",
+    "notProduct": "Bukan kode produk",
+    "unreadable": "Kode tidak terbaca, coba lagi"
   }
 }
