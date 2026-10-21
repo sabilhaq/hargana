@@ -1,19 +1,15 @@
-import type { Clock } from "./clock";
+import { systemClock, type Clock } from "./clock";
+import { places } from "./places";
 import { HarganaStorage } from "./storage";
 
 export type { Clock } from "./clock";
+export { CoreError, type CoreErrorCode } from "./errors";
+export { CURRENT_STORE_TTL_MS, NEARBY_KM } from "./places";
+export type * from "./types";
 
 export type CoreStatus = {
   itemCount: number;
   pendingSyncCount: number;
-};
-
-/**
- * The Hargana core: the only interface the UI uses. Reads and writes on-device
- * storage; the server is reached only through sync.
- */
-export type HarganaCore = {
-  status(): Promise<CoreStatus>;
 };
 
 export type CoreDeps = {
@@ -21,14 +17,21 @@ export type CoreDeps = {
   clock?: Clock;
 };
 
-export function createCore({ storage = new HarganaStorage() }: CoreDeps = {}): HarganaCore {
+/**
+ * The Hargana core: the only interface the UI uses. Reads and writes on-device
+ * storage; the server is reached only through sync.
+ */
+export function createCore({ storage = new HarganaStorage(), clock = systemClock }: CoreDeps = {}) {
   return {
-    async status() {
+    async status(): Promise<CoreStatus> {
       const [itemCount, pendingSyncCount] = await Promise.all([
         storage.items.count(),
         storage.outbox.count(),
       ]);
       return { itemCount, pendingSyncCount };
     },
+    ...places(storage, clock),
   };
 }
+
+export type HarganaCore = ReturnType<typeof createCore>;
