@@ -61,3 +61,30 @@ export type CoreContext = {
   activeRegion: Region;
   currentStore: Store | null;
 };
+
+/** Units a commodity can be priced per. */
+export const PRICING_UNITS = ["kg", "g", "ons", "l", "ml", "pcs", "butir", "ikat", "bungkus", "sisir", "papan"] as const;
+export type PricingUnit = (typeof PRICING_UNITS)[number];
+
+/** A non-barcoded item priced per unit, found by search (e.g. "Cabai rawit merah" per kg). */
+export type Commodity = {
+  id: string;
+  kind: "commodity";
+  name: string;
+  /** Other names it goes by, e.g. "cabe rawit" or the Sundanese "cengek". */
+  aliases: string[];
+  categoryId: string | null;
+  pricingUnit: PricingUnit;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** Anything in the catalog. Barcoded products join in a later ticket. */
+export type Item = Commodity;
+
+export type CommodityInput = Omit<Commodity, "id" | "kind" | "createdAt" | "updatedAt"> & { id?: string };
+
+export type ItemMatch = {
+  item: Item;
+  category: Category | null;
+};

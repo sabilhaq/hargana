@@ -1,14 +1,12 @@
 import Dexie, { type EntityTable, type Transaction } from "dexie";
 import { seedCategories, seedRegions } from "./seed";
-import type { Category, Chain, Region, Store } from "./types";
+import type { Category, Chain, Item, Region, Store } from "./types";
 
-// Items are filled in by later tickets (commodities, products).
-export type ItemRecord = { id: string; barcode?: string; name: string };
 export type OutboxEntry = { id: string; createdAt: string };
 export type SettingRecord = { key: string; value: unknown };
 
 export class HarganaStorage extends Dexie {
-  items!: EntityTable<ItemRecord, "id">;
+  items!: EntityTable<Item, "id">;
   outbox!: EntityTable<OutboxEntry, "id">;
   regions!: EntityTable<Region, "id">;
   chains!: EntityTable<Chain, "id">;
@@ -31,6 +29,9 @@ export class HarganaStorage extends Dexie {
         settings: "key",
       })
       .upgrade(seed);
+    this.version(3).stores({
+      items: "id, barcode, categoryId",
+    });
     this.on("populate", seed);
   }
 }
