@@ -1,6 +1,7 @@
-import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { bigint, boolean, index, jsonb, pgSequence, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
-// Better Auth core tables. Hargana domain tables arrive with sync (#11).
+// Better Auth core tables.
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -50,4 +51,51 @@ export const verification = pgTable("verification", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Hargana domain tables, written only through sync. Each row keeps the record
+// as the device sent it (`data`) plus the columns sync filters on. `seq` comes
+// from one sequence shared by all of them and is bumped on every change, so
+// "changed since cursor N" is `seq > N` in every table.
+
+export const syncSeq = pgSequence("sync_seq");
+
+const synced = {
+  id: text("id").primaryKey(),
+  seq: bigint("seq", { mode: "number" })
+    .notNull()
+    .default(sql`nextval('sync_seq')`),
+  /** The record's own ISO timestamp; the newer one wins. */
+  updatedAt: text("updated_at").notNull(),
+  data: jsonb("data").notNull(),
+};
+
+export const regions = pgTable("regions", synced, (t) => [index().on(t.seq)]);
+
+export const categories = pgTable("categories", synced, (t) => [index().on(t.seq)]);
+
+export const chains = pgTable("chains", { ...synced, regionId: text("region_id").notNull() }, (t) => [
+  index().on(t.regionId, t.seq),
+]);
+
+export const stores = pgTable("stores", { ...synced, regionId: text("region_id").notNull() }, (t) => [
+  index().on(t.regionId, t.seq),
+]);
+
+export const items = pgTable("items", { ...synced, barcode: text("barcode") }, (t) => [
+  index().on(t.seq),
+  uniqueIndex().on(t.barcode),
+]);
+
+/** Append-only: an observation never changes once stored. */
+export const observations = pgTable(
+  "observations",
+  { ...synced, regionId: text("region_id").notNull(), itemId: text("item_id").notNull() },
+  (t) => [index().on(t.regionId, t.seq), index().on(t.itemId)],
+);
+
+/** Item ids a device pushed for a barcode the server already had under another id. */
+export const itemAliases = pgTable("item_aliases", {
+  fromId: text("from_id").primaryKey(),
+  toId: text("to_id").notNull(),
 });

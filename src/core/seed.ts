@@ -3,7 +3,7 @@ import type { Category, Region } from "./types";
 // Fixed ids so every device seeds the same records and sync never duplicates them.
 export const GARUT_REGION_ID = "4a518048-414d-497c-bc12-71c6dae385c7";
 
-const SEEDED_AT = "2026-01-01T00:00:00.000Z";
+export const SEEDED_AT = "2026-01-01T00:00:00.000Z";
 
 export const seedRegions: Region[] = [
   {

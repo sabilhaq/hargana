@@ -1,8 +1,10 @@
+import { liveQuery } from "dexie";
 import { catalog } from "./catalog";
 import { systemClock, type Clock } from "./clock";
 import { places } from "./places";
 import { prices } from "./prices";
 import { HarganaStorage } from "./storage";
+import { sync } from "./sync";
 
 export type { Clock } from "./clock";
 export { CoreError, type CoreErrorCode } from "./errors";
@@ -12,6 +14,8 @@ export { priceUnit } from "./prices";
 export { PRICING_UNITS, SIZE_UNITS } from "./types";
 export type * from "./types";
 export { compatibleUnits, perUnitPrice } from "./units";
+export { emptyRecords } from "./sync";
+export type { PullRequest, PullResponse, PushRequest, PushResponse, SyncRecords, SyncReport, SyncTransport } from "./sync";
 
 export type CoreStatus = {
   itemCount: number;
@@ -29,17 +33,21 @@ export type CoreDeps = {
  */
 export function createCore({ storage = new HarganaStorage(), clock = systemClock }: CoreDeps = {}) {
   const placesApi = places(storage, clock);
+  async function status(): Promise<CoreStatus> {
+    const [itemCount, pendingSyncCount] = await Promise.all([storage.items.count(), storage.outbox.count()]);
+    return { itemCount, pendingSyncCount };
+  }
   return {
-    async status(): Promise<CoreStatus> {
-      const [itemCount, pendingSyncCount] = await Promise.all([
-        storage.items.count(),
-        storage.outbox.count(),
-      ]);
-      return { itemCount, pendingSyncCount };
+    status,
+    /** Calls `listener` with the status now and whenever it changes; returns an unsubscribe function. */
+    watchStatus(listener: (status: CoreStatus) => void) {
+      const subscription = liveQuery(status).subscribe({ next: listener });
+      return () => subscription.unsubscribe();
     },
     ...placesApi,
     ...catalog(storage, clock),
     ...prices(storage, clock, placesApi.context),
+    ...sync(storage),
   };
 }
 

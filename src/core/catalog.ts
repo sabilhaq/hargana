@@ -58,7 +58,7 @@ export function catalog(storage: HarganaStorage, clock: Clock) {
     async saveCommodity(input: CommodityInput): Promise<Commodity> {
       if (!PRICING_UNITS.includes(input.pricingUnit)) throw new CoreError("invalid", "unknown pricing unit");
       const commodity: Commodity = { ...(await prepare(input)), kind: "commodity", pricingUnit: input.pricingUnit };
-      await storage.items.put(commodity);
+      await storage.saveSynced("items", commodity);
       return commodity;
     },
 
@@ -81,7 +81,7 @@ export function catalog(storage: HarganaStorage, clock: Clock) {
         ...(brand && { brand }),
         ...(hasSize && { sizeValue: input.sizeValue, sizeUnit: input.sizeUnit }),
       };
-      await storage.items.put(product);
+      await storage.saveSynced("items", product);
       return product;
     },
 

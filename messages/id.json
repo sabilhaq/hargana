@@ -18,7 +18,6 @@
     "emptyTitle": "Belum ada barang",
     "emptyBody": "Tambahkan barang pasar seperti cabai atau bawang, lalu cari dengan namanya.",
     "itemCount": "{count, plural, other {# barang}}",
-    "pendingSync": "{count, plural, =0 {Semua tersimpan} other {# menunggu sinkron}}",
     "loading": "Memuat…",
     "search": "Cari barang, mis. cabe, beras",
     "noResults": "Tidak ada yang cocok dengan “{query}”.",
@@ -214,5 +213,13 @@
     "lowest90": "Terendah 90 hari",
     "atLowest": "harga di sini setara terendah",
     "otherBranches": "cabang {chain} lain"
+  },
+  "Sync": {
+    "synced": "Tersinkron ✓",
+    "syncing": "Menyinkronkan…",
+    "pending": "{count, plural, other {# menunggu sinkron}}",
+    "offline": "Offline · {count, plural, other {# menunggu}}",
+    "retry": "Ketuk untuk sinkron sekarang",
+    "signedOut": "Masuk lagi untuk sinkron"
   }
 }

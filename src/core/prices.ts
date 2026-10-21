@@ -164,7 +164,7 @@ export function prices(
         verified: true,
         observedAt: clock.now().toISOString(),
       };
-      await storage.observations.add(observation);
+      await storage.saveSynced("observations", observation);
       return observation;
     },
 
@@ -190,7 +190,7 @@ export function prices(
         verified: true,
         observedAt: clock.now().toISOString(),
       };
-      await storage.observations.add(observation);
+      await storage.saveSynced("observations", observation);
       return observation;
     },
 
