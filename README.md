@@ -28,6 +28,7 @@ With `DATABASE_URL` empty, the server uses an embedded PGlite database on disk, 
 ## Architecture
 
 - **Hargana core** (`src/core`): the only interface the UI uses. Reads and writes on-device storage (Dexie/IndexedDB) with an injected clock. The server is reached only through sync (#11). First run seeds Kabupaten Garut and the default categories (fixed ids, so devices agree).
+- **Search**: Fuse.js over item names and aliases, run on the device (`searchItems` in the core); thresholds live in `src/core/catalog.ts`.
 - **Screens** (`src/app/(app)`): client components that talk to the core via `useCoreData`; shared building blocks live in `ui.tsx`.
 - **Server** (`src/server`): Better Auth (email + password, 90-day session, no sign-up) on Postgres via Drizzle — Neon in production, PGlite locally.
 - **Proxy** (`src/proxy.ts`): redirects requests without a session cookie to `/login`. API routes verify the session themselves.

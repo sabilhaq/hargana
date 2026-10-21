@@ -16,10 +16,16 @@
     "signedInAs": "Masuk sebagai {email}",
     "signOut": "Keluar",
     "emptyTitle": "Belum ada barang",
-    "emptyBody": "Barang dan harga yang kamu catat akan muncul di sini.",
+    "emptyBody": "Tambahkan barang pasar seperti cabai atau bawang, lalu cari dengan namanya.",
     "itemCount": "{count, plural, other {# barang}}",
     "pendingSync": "{count, plural, =0 {Semua tersimpan} other {# menunggu sinkron}}",
-    "loading": "Memuat…"
+    "loading": "Memuat…",
+    "search": "Cari barang, mis. cabe, beras",
+    "noResults": "Tidak ada yang cocok dengan “{query}”.",
+    "addNamed": "Tambah “{name}”",
+    "categories": "Kategori",
+    "categoryEmpty": "Belum ada barang di {category}.",
+    "addCommodity": "+ Tambah barang pasar"
   },
   "Common": {
     "back": "Kembali",
@@ -107,5 +113,30 @@
     "edit": "Ubah kategori",
     "name": "Nama",
     "sortOrder": "Urutan"
+  },
+  "Items": {
+    "add": "Tambah barang pasar",
+    "edit": "Ubah barang",
+    "name": "Nama",
+    "pricingUnit": "Harga per",
+    "category": "Kategori",
+    "noCategory": "Tanpa kategori",
+    "aliases": "Nama lain",
+    "aliasesHint": "Pisahkan dengan koma. Nama lain ikut dicari, mis. “cabe”, “cengek”, atau “bawang beureum”.",
+    "perUnit": "per {unit}",
+    "notFound": "Barang tidak ditemukan."
+  },
+  "Units": {
+    "kg": "kg",
+    "g": "gram",
+    "ons": "ons",
+    "l": "liter",
+    "ml": "ml",
+    "pcs": "buah",
+    "butir": "butir",
+    "ikat": "ikat",
+    "bungkus": "bungkus",
+    "sisir": "sisir",
+    "papan": "papan"
   }
 }
