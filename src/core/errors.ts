@@ -5,7 +5,9 @@ export type CoreErrorCode =
   | "chain_in_other_region"
   | "invalid"
   | "invalid_barcode"
-  | "barcode_taken";
+  | "barcode_taken"
+  | "no_current_store"
+  | "incompatible_unit";
 
 export class CoreError extends Error {
   constructor(

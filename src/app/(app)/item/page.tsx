@@ -6,8 +6,9 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useDescribeItem } from "../items/describe";
 import { Empty, Screen, useCoreData } from "../ui";
+import { PricePanel } from "./price-panel";
 
-// The item's page (`?id=`). Prices and the result screen arrive with #6.
+// The result screen for one item (`?id=`): what it is, and its price at every store.
 export default function ItemPage() {
   return (
     <Suspense>
@@ -58,7 +59,7 @@ function ItemDetails() {
               </>
             )}
           </dl>
-          <Empty>{t("noPricesYet")}</Empty>
+          <PricePanel item={item} />
           <Link
             href={`/items/edit?id=${item.id}`}
             className="rounded-lg border border-neutral-300 px-4 py-3 text-center font-semibold dark:border-neutral-700"

@@ -1,13 +1,17 @@
 import { catalog } from "./catalog";
 import { systemClock, type Clock } from "./clock";
 import { places } from "./places";
+import { prices } from "./prices";
 import { HarganaStorage } from "./storage";
 
 export type { Clock } from "./clock";
 export { CoreError, type CoreErrorCode } from "./errors";
+export { currencyDigits } from "./money";
 export { CURRENT_STORE_TTL_MS, NEARBY_KM } from "./places";
+export { priceUnit } from "./prices";
 export { PRICING_UNITS, SIZE_UNITS } from "./types";
 export type * from "./types";
+export { compatibleUnits, perUnitPrice } from "./units";
 
 export type CoreStatus = {
   itemCount: number;
@@ -24,6 +28,7 @@ export type CoreDeps = {
  * storage; the server is reached only through sync.
  */
 export function createCore({ storage = new HarganaStorage(), clock = systemClock }: CoreDeps = {}) {
+  const placesApi = places(storage, clock);
   return {
     async status(): Promise<CoreStatus> {
       const [itemCount, pendingSyncCount] = await Promise.all([
@@ -32,8 +37,9 @@ export function createCore({ storage = new HarganaStorage(), clock = systemClock
       ]);
       return { itemCount, pendingSyncCount };
     },
-    ...places(storage, clock),
+    ...placesApi,
     ...catalog(storage, clock),
+    ...prices(storage, clock, placesApi.context),
   };
 }
 
