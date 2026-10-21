@@ -79,10 +79,40 @@ export type Commodity = {
   updatedAt: string;
 };
 
-/** Anything in the catalog. Barcoded products join in a later ticket. */
-export type Item = Commodity;
+/** Units a product's package size can be given in (e.g. 400 g, 1 l, 10 pcs). */
+export const SIZE_UNITS = ["g", "kg", "ml", "l", "pcs"] as const;
+export type SizeUnit = (typeof SIZE_UNITS)[number];
+
+/** A packaged item identified by its barcode, e.g. "Indomie Goreng 85 g". */
+export type Product = {
+  id: string;
+  kind: "product";
+  /** Canonical GTIN: 13 digits (EAN-13, UPC-A, expanded UPC-E) or 8 (EAN-8). */
+  barcode: string;
+  name: string;
+  brand?: string;
+  sizeValue?: number;
+  sizeUnit?: SizeUnit;
+  aliases: string[];
+  categoryId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** Anything in the catalog. */
+export type Item = Commodity | Product;
 
 export type CommodityInput = Omit<Commodity, "id" | "kind" | "createdAt" | "updatedAt"> & { id?: string };
+/** `barcode` may be in any valid EAN/UPC form; it is stored canonically. */
+export type ProductInput = Omit<Product, "id" | "kind" | "createdAt" | "updatedAt"> & { id?: string };
+
+export type BarcodeFormat = "ean_13" | "ean_8" | "upc_a" | "upc_e";
+
+/** What a scanned or typed code turned out to be. */
+export type BarcodeLookup =
+  | { status: "found"; barcode: string; item: Product }
+  | { status: "unknown"; barcode: string }
+  | { status: "invalid"; reason: "not_product" | "wrong_length" | "bad_check_digit" };
 
 export type ItemMatch = {
   item: Item;

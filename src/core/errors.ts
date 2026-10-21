@@ -3,7 +3,9 @@ export type CoreErrorCode =
   | "branch_needs_chain"
   | "market_has_no_chain"
   | "chain_in_other_region"
-  | "invalid";
+  | "invalid"
+  | "invalid_barcode"
+  | "barcode_taken";
 
 export class CoreError extends Error {
   constructor(

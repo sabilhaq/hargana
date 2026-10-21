@@ -155,6 +155,11 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
       dialog.querySelector<HTMLElement>("input:not([type=radio]), select, textarea")?.focus();
     }
     if (!open && dialog.open) dialog.close();
+    // Navigating away keeps the screen mounted but hidden; a modal left open
+    // would make the next screen inert.
+    return () => {
+      if (dialog.open) dialog.close();
+    };
   }, [open]);
 
   return (
