@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "vercel-build": "tsx scripts/migrate.ts --production-only && next build",
     "start": "next start",
     "postinstall": "node scripts/copy-zxing-wasm.mjs",
     "lint": "eslint && node scripts/check-logical-css.mjs",
