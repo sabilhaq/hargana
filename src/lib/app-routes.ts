@@ -8,6 +8,7 @@ export const APP_ROUTES = [
   "/settings/categories",
   "/settings/unknown-barcodes",
   "/settings/export",
+  "/settings/invites",
   "/item",
   "/items/edit",
 ] as const;

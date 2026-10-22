@@ -115,3 +115,20 @@ export const itemAliases = pgTable("item_aliases", {
   fromId: text("from_id").primaryKey(),
   toId: text("to_id").notNull(),
 });
+
+/**
+ * One-time links the owner sends to friends to create a contributor account.
+ * Only a hash of the token is kept, so the database cannot be used to sign up.
+ */
+export const invites = pgTable("invites", {
+  id: text("id").primaryKey(),
+  tokenHash: text("token_hash").notNull().unique(),
+  /** Who it is for, to recognise it in the list (optional). */
+  name: text("name"),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  usedBy: text("used_by"),
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+});

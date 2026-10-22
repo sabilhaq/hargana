@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { usePermissions } from "../permissions";
 import { useCore } from "../core-provider";
 import { Button, inputClass, List, Row, Screen, Section, useCoreData } from "../ui";
 
@@ -11,6 +12,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const core = useCore();
   const { data: session } = authClient.useSession();
+  const { canManageSettings } = usePermissions();
   const [regions] = useCoreData((c) => c.listRegions());
   const [context, reloadContext] = useCoreData((c) => c.context());
 
@@ -49,6 +51,7 @@ export default function SettingsPage() {
           <Row href="/settings/categories" title={t("Categories.title")} trailing="›" />
           <Row href="/settings/unknown-barcodes" title={t("UnknownBarcodes.title")} detail={t("Settings.unknownBarcodesHint")} trailing="›" />
           <Row href="/settings/export" title={t("Export.title")} detail={t("Settings.exportHint")} trailing="›" />
+          {canManageSettings && <Row href="/settings/invites" title={t("Invites.title")} detail={t("Settings.invitesHint")} trailing="›" />}
         </List>
       </Section>
 
