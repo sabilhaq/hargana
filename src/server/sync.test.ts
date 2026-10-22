@@ -204,12 +204,13 @@ describe("unknown barcode scans", () => {
 describe("price corrections", () => {
   it("reach the other devices, and pushing them twice changes nothing", async () => {
     const { call, transport } = await testServer();
-    const a = testCore().core;
+    const { core: a, clock } = testCore();
     const b = testCore().core;
     const { regionId, guntur } = await setUp(a);
     const cabai = await a.saveCommodity({ name: "Cabai rawit", pricingUnit: "kg", categoryId: null, aliases: [] });
     await a.setCurrentStore(guntur.id);
     await a.recordPrice({ itemId: cabai.id, amount: 40000, qty: 1, unit: "kg" });
+    clock.advance(60_000);
     const typo = await a.recordPrice({ itemId: cabai.id, amount: 4000, qty: 1, unit: "kg" });
     await a.sync(transport);
     await b.sync(transport);
