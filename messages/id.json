@@ -279,5 +279,12 @@
     "today": "hari ini",
     "lowest": "terendah 90 hari {price}",
     "showAll": "Tampilkan semua ({count})"
+  },
+  "Stale": {
+    "title": "Perlu dicek di sini",
+    "hint": "Harga ini sudah lama. Cocokkan dengan rak, lalu ketuk “Sama ✓” atau “Ubah”.",
+    "change": "Ubah",
+    "dismiss": "Sembunyikan {item} untuk kunjungan ini",
+    "more": "{count, plural, other {dan # barang lain}}"
   }
 }

@@ -1,5 +1,6 @@
 import type { Clock } from "./clock";
 import { CoreError } from "./errors";
+import { currentVisit } from "./places";
 import type { HarganaStorage } from "./storage";
 import type {
   Chain,
@@ -14,12 +15,17 @@ import type {
   PriceHistoryEntry,
   PriceObservation,
   PriceRow,
+  Region,
+  StalePrice,
   Store,
   StorePrice,
 } from "./types";
 import { perUnitPrice } from "./units";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** Items dismissed from the stale list, for one visit to a store. */
+const STALE_DISMISSED = "staleDismissed";
+type StaleDismissed = { visit: string; itemIds: string[] };
 const LOWEST_WINDOW_DAYS = 90;
 
 /** The calendar day on the device, YYYY-MM-DD. */
@@ -300,6 +306,68 @@ export function prices(
         stores: [...new Map(all.map((e) => [e.store.id, e.store])).values()].sort((a, b) => a.name.localeCompare(b.name)),
         asOf: clock.now().toISOString(),
       };
+    },
+
+    /**
+     * At the current store: items whose price here is stale (older than the
+     * region's threshold for markets or supermarkets), most stale first,
+     * without those dismissed on this visit. Empty without a current store.
+     */
+    async stalePricesHere({ limit = 10 }: { limit?: number } = {}): Promise<{ prices: StalePrice[]; total: number; region: Region | null }> {
+      const { currentStore: store } = await context();
+      if (!store) return { prices: [], total: 0, region: null };
+      const [region, observations, corrections, dismissed, visit] = await Promise.all([
+        storage.regions.get(store.regionId),
+        storage.observations.filter((o) => o.regionId === store.regionId).toArray(),
+        storage.priceCorrections.toArray(),
+        storage.settings.get(STALE_DISMISSED),
+        currentVisit(storage),
+      ]);
+      const hidden = new Set(
+        (dismissed?.value as StaleDismissed | undefined)?.visit === visit ? (dismissed!.value as StaleDismissed).itemIds : [],
+      );
+      const threshold = store.type === "traditional_market" ? region!.staleDaysMarket : region!.staleDaysSupermarket;
+      const now = clock.now().getTime();
+      const today = localDay(clock.now());
+
+      const byItem = new Map<string, PriceObservation[]>();
+      for (const o of withoutCorrected(observations, corrections).live) {
+        byItem.set(o.itemId, [...(byItem.get(o.itemId) ?? []), o]);
+      }
+      const stale: { itemId: string; observation: PriceObservation; ageDays: number }[] = [];
+      for (const [itemId, list] of byItem) {
+        if (hidden.has(itemId)) continue;
+        const observation = resolveStores(list, [store]).resolved.get(store.id);
+        if (!observation) continue;
+        const ageDays = Math.floor((now - new Date(observation.observedAt).getTime()) / DAY_MS);
+        if (ageDays > threshold) stale.push({ itemId, observation, ageDays });
+      }
+      stale.sort((a, b) => a.observation.observedAt.localeCompare(b.observation.observedAt));
+
+      const items = await storage.items.bulkGet(stale.slice(0, limit).map((s) => s.itemId));
+      const prices = stale.slice(0, limit).flatMap(({ observation, ageDays }, i) =>
+        items[i]
+          ? [
+              {
+                item: items[i],
+                ...effective(observation, today),
+                priceMax: observation.priceMax,
+                ageDays,
+                fromChain: observation.scope === "chain",
+              },
+            ]
+          : [],
+      );
+      return { prices, total: stale.length, region: region! };
+    },
+
+    /** Hides an item from the stale list until the current visit ends. */
+    async dismissStale(itemId: string) {
+      const visit = await currentVisit(storage);
+      if (!visit) return;
+      const current = (await storage.settings.get(STALE_DISMISSED))?.value as StaleDismissed | undefined;
+      const itemIds = current?.visit === visit ? [...new Set([...current.itemIds, itemId])] : [itemId];
+      await storage.settings.put({ key: STALE_DISMISSED, value: { visit, itemIds } satisfies StaleDismissed });
     },
 
     /** Every observation of an item, newest first, removed ones included. */

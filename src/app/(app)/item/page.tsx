@@ -21,7 +21,8 @@ export default function ItemPage() {
 function ItemDetails() {
   const t = useTranslations("Items");
   const describe = useDescribeItem();
-  const id = useSearchParams().get("id") ?? "";
+  const params = useSearchParams();
+  const id = params.get("id") ?? "";
   const [item] = useCoreData((core) => core.getItem(id).catch(() => null), [id]);
   const [categories] = useCoreData((core) => core.listCategories());
   const category = item && categories?.find((c) => c.id === item.categoryId);
@@ -63,7 +64,7 @@ function ItemDetails() {
             </dl>
             <ItemPhoto itemId={item.id} version={item.updatedAt} />
           </div>
-          <PricePanel item={item} />
+          <PricePanel item={item} startChanging={params.get("change") === "1"} />
           <Link
             href={`/items/edit?id=${item.id}`}
             className="rounded-lg border border-neutral-300 px-4 py-3 text-center font-semibold dark:border-neutral-700"

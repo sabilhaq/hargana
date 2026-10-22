@@ -9,7 +9,8 @@ export const CURRENT_STORE_TTL_MS = 4 * 60 * 60 * 1000;
 /** Stores closer than this are suggested first in the store picker. */
 export const NEARBY_KM = 3;
 
-type CurrentStoreSetting = { storeId: string; lastActiveAt: string };
+/** `visitId` changes each time a store is chosen; older settings lack it. */
+type CurrentStoreSetting = { storeId: string; lastActiveAt: string; visitId?: string };
 
 const ACTIVE_REGION = "activeRegionId";
 const CURRENT_STORE = "currentStore";
@@ -148,7 +149,7 @@ export function places(storage: HarganaStorage, clock: Clock) {
         return;
       }
       const store = must(await storage.stores.get(storeId), "Store", storeId);
-      const current: CurrentStoreSetting = { storeId, lastActiveAt: now() };
+      const current: CurrentStoreSetting = { storeId, lastActiveAt: now(), visitId: crypto.randomUUID() };
       await storage.settings.bulkPut([
         { key: CURRENT_STORE, value: current },
         { key: ACTIVE_REGION, value: store.regionId },
@@ -164,6 +165,15 @@ export function places(storage: HarganaStorage, clock: Clock) {
       await storage.settings.put({ key: ACTIVE_REGION, value: regionId });
     },
   };
+}
+
+/**
+ * Identifies the current visit to a store: a new one each time a store is
+ * chosen (including after the 4-hour reset). Null without a current store.
+ */
+export async function currentVisit(storage: HarganaStorage) {
+  const current = (await storage.settings.get(CURRENT_STORE))?.value as CurrentStoreSetting | undefined;
+  return current ? (current.visitId ?? `${current.storeId}@${current.lastActiveAt}`) : null;
 }
 
 /** The region the app shows: the one last chosen, else Garut, else any. */
