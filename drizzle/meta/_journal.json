@@ -22,6 +22,13 @@
       "when": 1792597271497,
       "tag": "0002_slimy_odin",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792639283300,
+      "tag": "0003_remarkable_lilith",
+      "breakpoints": true
     }
   ]
 }

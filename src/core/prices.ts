@@ -8,6 +8,7 @@ import type {
   EntryUnit,
   Item,
   ItemPrices,
+  PriceCorrection,
   PriceEntry,
   PriceObservation,
   PriceRow,
@@ -76,6 +77,24 @@ function newer(a?: PriceObservation, b?: PriceObservation) {
   return b.observedAt > a.observedAt ? b : a;
 }
 
+/**
+ * The observations that still count: without the corrected ones, and without
+ * confirmations of a corrected observation (or of such a confirmation).
+ */
+export function withoutCorrected(observations: PriceObservation[], corrections: Pick<PriceCorrection, "observationId">[]) {
+  const removed = new Set(corrections.map((c) => c.observationId));
+  for (let grew = removed.size > 0; grew; ) {
+    grew = false;
+    for (const o of observations) {
+      if (o.confirms && removed.has(o.confirms) && !removed.has(o.id)) {
+        removed.add(o.id);
+        grew = true;
+      }
+    }
+  }
+  return { live: observations.filter((o) => !removed.has(o.id)), removed };
+}
+
 const samePrice = (a: { price: number; priceMax: number | null }, b: { price: number; priceMax: number | null }) =>
   a.price === b.price && a.priceMax === b.priceMax;
 
@@ -96,8 +115,13 @@ export function prices(
     return currentStore;
   }
 
+  /** The item's observations in a region that still count (see withoutCorrected). */
   async function observationsAt(itemId: string, regionId: string) {
-    return storage.observations.where({ itemId, regionId }).toArray();
+    const [observations, corrections] = await Promise.all([
+      storage.observations.where({ itemId, regionId }).toArray(),
+      storage.priceCorrections.where({ itemId }).toArray(),
+    ]);
+    return withoutCorrected(observations, corrections).live;
   }
 
   /** The observation that gives `store` its current price, if any. */
@@ -185,6 +209,7 @@ export function prices(
         chainId: store.chainId,
         storeId: store.id,
         action: "confirm",
+        confirms: shown.id,
         note: null,
         source: "collector",
         verified: true,
@@ -194,7 +219,26 @@ export function prices(
       return observation;
     },
 
-    /** Every observation of an item, newest first. */
+    /**
+     * Takes back a price recorded by mistake: the store falls back to the price
+     * it had before. Nothing is deleted; a correction is recorded and synced.
+     * Removing the same observation again changes nothing.
+     */
+    async removePrice(observationId: string): Promise<PriceCorrection> {
+      const observation = await storage.observations.get(observationId);
+      if (!observation) throw new CoreError("not_found", `Observation ${observationId} not found`);
+      const existing = await storage.priceCorrections.where({ observationId }).first();
+      if (existing) return existing;
+      return storage.saveSynced("priceCorrections", {
+        id: crypto.randomUUID(),
+        observationId,
+        itemId: observation.itemId,
+        regionId: observation.regionId,
+        correctedAt: clock.now().toISOString(),
+      });
+    },
+
+    /** Every observation of an item, newest first, removed ones included. */
     async listObservations(itemId: string) {
       const observations = await storage.observations.where({ itemId }).toArray();
       return observations.sort((a, b) => b.observedAt.localeCompare(a.observedAt));

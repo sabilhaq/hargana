@@ -15,7 +15,7 @@ import {
 } from "@/core";
 import { formatMoney, parseAmount } from "@/lib/money";
 import { useCore } from "../core-provider";
-import { Button, Empty, Field, FormError, inputClass, List, Section, useCoreData, useSave } from "../ui";
+import { Button, Empty, Field, FormError, inputClass, List, Section, Sheet, useCoreData, useSave } from "../ui";
 
 /** Every store's price for the item, and recording at the current store. */
 export function PricePanel({ item }: { item: Item }) {
@@ -37,7 +37,7 @@ export function PricePanel({ item }: { item: Item }) {
         <p className="rounded-xl bg-neutral-100 px-4 py-3 text-sm dark:bg-neutral-800">{t("viewOnly")}</p>
       )}
       <Section title={t("title", { region: prices.region.name })}>
-        {prices.rows.length === 0 ? <Empty>{t("none")}</Empty> : <PriceList prices={prices} here={store?.id} />}
+        {prices.rows.length === 0 ? <Empty>{t("none")}</Empty> : <PriceList prices={prices} here={store?.id} onRemoved={reload} />}
       </Section>
     </>
   );
@@ -197,9 +197,11 @@ function RecordHere({ item, store, prices, onSaved }: { item: Item; store: Store
   );
 }
 
-function PriceList({ prices: { rows, region, unit }, here }: { prices: ItemPrices; here?: string }) {
+function PriceList({ prices, here, onRemoved }: { prices: ItemPrices; here?: string; onRemoved: () => void }) {
+  const { rows, region, unit } = prices;
   const t = useTranslations();
   const perUnit = t("Items.perUnit", { unit: t(`Units.${unit}`) });
+  const [selected, setSelected] = useState<StorePrice | null>(null);
 
   const priceCell = (p: { price: number; regularPrice: number; priceMax: number | null; promoUntil: string | null }) => (
     <div className="shrink-0 text-end">
@@ -208,8 +210,14 @@ function PriceList({ prices: { rows, region, unit }, here }: { prices: ItemPrice
     </div>
   );
 
+  // Tapping a store's price shows where it came from, and lets me remove it.
   const storeLine = (p: StorePrice, detail: string) => (
-    <div className="flex items-start justify-between gap-3">
+    <button
+      type="button"
+      onClick={() => setSelected(p)}
+      aria-haspopup="dialog"
+      className="flex w-full items-start justify-between gap-3 text-start"
+    >
       <div className="flex min-w-0 flex-col">
         <span className="truncate font-medium">
           {p.store.name}
@@ -226,7 +234,7 @@ function PriceList({ prices: { rows, region, unit }, here }: { prices: ItemPrice
         {p.note && <span className="text-sm italic opacity-70">{p.note}</span>}
       </div>
       {priceCell(p)}
-    </div>
+    </button>
   );
 
   const row = (r: PriceRow) =>
@@ -262,7 +270,121 @@ function PriceList({ prices: { rows, region, unit }, here }: { prices: ItemPrice
       </li>
     );
 
-  return <List>{rows.map(row)}</List>;
+  return (
+    <>
+      <List>{rows.map(row)}</List>
+      <PriceDetails
+        price={selected}
+        region={region}
+        perUnit={perUnit}
+        onClose={() => setSelected(null)}
+        onRemoved={() => {
+          setSelected(null);
+          onRemoved();
+        }}
+      />
+    </>
+  );
+}
+
+/** Where a store's price came from, with "Hapus harga ini" for one recorded by mistake. */
+function PriceDetails({
+  price,
+  region,
+  perUnit,
+  onClose,
+  onRemoved,
+}: {
+  price: StorePrice | null;
+  region: Region;
+  perUnit: string;
+  onClose: () => void;
+  onRemoved: () => void;
+}) {
+  const t = useTranslations("PriceDetails");
+  const core = useCore();
+  const money = useMoney(region);
+  const format = useFormatter();
+  const { saving, error, run } = useSave();
+  const [confirming, setConfirming] = useState(false);
+  const o = price?.observation;
+
+  function close() {
+    setConfirming(false);
+    onClose();
+  }
+
+  async function remove() {
+    if (o && (await run(() => core.removePrice(o.id)))) {
+      setConfirming(false);
+      onRemoved();
+    }
+  }
+
+  return (
+    <Sheet open={!!price} onClose={close} title={price?.store.name ?? ""}>
+      {price && o && (
+        <div className="flex flex-col gap-4">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+            <dt className="opacity-60">{t("price")}</dt>
+            <dd className="font-semibold tabular-nums">
+              {money(o.price, o.priceMax)} <span className="font-normal opacity-60">{perUnit}</span>
+            </dd>
+            {o.promoPrice != null && o.promoUntil && (
+              <>
+                <dt className="opacity-60">{t("promo")}</dt>
+                <dd className="tabular-nums">
+                  {money(o.promoPrice)} · {format.dateTime(new Date(`${o.promoUntil}T00:00:00`), { day: "numeric", month: "short" })}
+                </dd>
+              </>
+            )}
+            <dt className="opacity-60">{t("entered")}</dt>
+            <dd className="tabular-nums">
+              {money(o.enteredAmount, o.enteredAmountMax)} / {o.enteredQty} {o.enteredUnit}
+            </dd>
+            <dt className="opacity-60">{t("recorded")}</dt>
+            <dd>
+              {format.dateTime(new Date(o.observedAt), { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+              {" · "}
+              {t(`action_${o.action}`)}
+            </dd>
+            {o.scope === "chain" && price.chain && (
+              <>
+                <dt className="opacity-60">{t("appliesTo")}</dt>
+                <dd>{t("wholeChain", { chain: price.chain.name })}</dd>
+              </>
+            )}
+            {o.note && (
+              <>
+                <dt className="opacity-60">{t("note")}</dt>
+                <dd className="italic">{o.note}</dd>
+              </>
+            )}
+          </dl>
+          <FormError error={error} />
+          {confirming ? (
+            <div className="flex flex-col gap-3 rounded-xl border border-red-300 p-4 dark:border-red-900">
+              <p className="text-sm">
+                {o.scope === "chain" && price.chain ? t("removeChainHint", { chain: price.chain.name }) : t("removeHint")}
+              </p>
+              <div className="flex gap-2">
+                <Button variant="secondary" onClick={() => setConfirming(false)} className="flex-1">
+                  {t("keep")}
+                </Button>
+                <Button onClick={remove} disabled={saving} className="flex-1 bg-red-700!">
+                  {t("removeConfirm")}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button variant="ghost" onClick={() => setConfirming(true)} className="text-red-700! dark:text-red-400!">
+              {t("remove")}
+            </Button>
+          )}
+        </div>
+      )}
+    </Sheet>
+  );
 }
 
 function RecordForm({

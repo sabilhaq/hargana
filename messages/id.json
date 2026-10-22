@@ -252,5 +252,22 @@
     "jsonTitle": "JSON",
     "jsonHint": "Satu file berisi semua data persis seperti disimpan, untuk cadangan atau diolah program lain.",
     "json": "Unduh JSON"
+  },
+  "PriceDetails": {
+    "price": "Harga",
+    "promo": "Promo",
+    "entered": "Diketik",
+    "recorded": "Dicatat",
+    "action_new": "harga baru",
+    "action_change": "harga berubah",
+    "action_confirm": "dicek, sama ✓",
+    "appliesTo": "Berlaku untuk",
+    "wholeChain": "semua cabang {chain}",
+    "note": "Catatan",
+    "remove": "Hapus harga ini",
+    "removeHint": "Harga ini dianggap salah catat dan tidak dipakai lagi. Toko ini kembali ke harga sebelumnya, dan konfirmasi “Sama ✓” untuk harga ini ikut dihapus.",
+    "removeChainHint": "Harga ini berlaku untuk semua cabang {chain}. Setelah dihapus, setiap cabang kembali ke harga sebelumnya, dan konfirmasi “Sama ✓” untuk harga ini ikut dihapus.",
+    "keep": "Batal",
+    "removeConfirm": "Ya, hapus"
   }
 }

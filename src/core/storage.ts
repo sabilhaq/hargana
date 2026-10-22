@@ -1,9 +1,18 @@
 import Dexie, { type EntityTable, type Transaction } from "dexie";
 import { SEEDED_AT, seedCategories, seedRegions } from "./seed";
-import type { Category, Chain, Item, PriceObservation, Region, Store, UnknownBarcodeScan } from "./types";
+import type { Category, Chain, Item, PriceCorrection, PriceObservation, Region, Store, UnknownBarcodeScan } from "./types";
 
 /** Tables whose records are pushed to and pulled from the server. */
-export const SYNCED_TABLES = ["regions", "categories", "chains", "stores", "items", "observations", "unknownBarcodes"] as const;
+export const SYNCED_TABLES = [
+  "regions",
+  "categories",
+  "chains",
+  "stores",
+  "items",
+  "observations",
+  "priceCorrections",
+  "unknownBarcodes",
+] as const;
 export type SyncedTable = (typeof SYNCED_TABLES)[number];
 
 /**
@@ -37,6 +46,7 @@ export class HarganaStorage extends Dexie {
   observations!: EntityTable<PriceObservation, "id">;
   photos!: EntityTable<PhotoRecord, "id">;
   unknownBarcodes!: EntityTable<UnknownBarcodeScan, "id">;
+  priceCorrections!: EntityTable<PriceCorrection, "id">;
 
   constructor(name = "hargana") {
     super(name);
@@ -65,6 +75,9 @@ export class HarganaStorage extends Dexie {
     });
     this.version(7).stores({
       unknownBarcodes: "id, barcode, scannedAt",
+    });
+    this.version(8).stores({
+      priceCorrections: "id, observationId, itemId",
     });
     this.on("populate", seed);
   }

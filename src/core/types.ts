@@ -191,9 +191,24 @@ export type PriceObservation = {
   /** Promo price (same units as `price`), valid through `promoUntil` (YYYY-MM-DD, inclusive). */
   promoPrice?: number | null;
   promoUntil?: string | null;
+  /** For a "Sama ✓" confirmation: the observation whose price it confirmed. */
+  confirms?: string | null;
   source: "collector" | "shopper";
   verified: boolean;
   observedAt: string;
+};
+
+/**
+ * Takes back an observation recorded by mistake. Observations are never
+ * edited or deleted; a correction makes every price rule ignore the one it
+ * points at, and the confirmations that copied it.
+ */
+export type PriceCorrection = {
+  id: string;
+  observationId: string;
+  itemId: string;
+  regionId: string;
+  correctedAt: string;
 };
 
 /** A price as typed at the store: `amount` (minor units) for `qty` `unit`. */

@@ -1,7 +1,7 @@
 import type { Clock } from "./clock";
-import { priceUnit } from "./prices";
+import { priceUnit, withoutCorrected } from "./prices";
 import type { HarganaStorage } from "./storage";
-import type { Category, Chain, Item, PriceObservation, Region, Store, UnknownBarcodeScan } from "./types";
+import type { Category, Chain, Item, PriceCorrection, PriceObservation, Region, Store, UnknownBarcodeScan } from "./types";
 
 /** Everything on the device, as stored. Prices are integers in the currency's minor unit. */
 export type ExportData = {
@@ -12,23 +12,29 @@ export type ExportData = {
   stores: Store[];
   categories: Category[];
   items: Item[];
-  /** Each with its region's currency code, so prices read on their own. */
-  observations: (PriceObservation & { currency: string })[];
+  /**
+   * Each with its region's currency code, so prices read on their own, and
+   * whether it was removed (corrected, or a confirmation of a corrected price).
+   */
+  observations: (PriceObservation & { currency: string; removed: boolean })[];
+  priceCorrections: PriceCorrection[];
   unknownBarcodes: UnknownBarcodeScan[];
 };
 
 export function exporter(storage: HarganaStorage, clock: Clock) {
   async function exportData(): Promise<ExportData> {
-    const [regions, chains, stores, categories, items, observations, unknownBarcodes] = await Promise.all([
+    const [regions, chains, stores, categories, items, observations, priceCorrections, unknownBarcodes] = await Promise.all([
       storage.regions.toArray(),
       storage.chains.toArray(),
       storage.stores.toArray(),
       storage.categories.toArray(),
       storage.items.toArray(),
       storage.observations.orderBy("observedAt").toArray(),
+      storage.priceCorrections.toArray(),
       storage.unknownBarcodes.orderBy("scannedAt").toArray(),
     ]);
     const currency = new Map(regions.map((r) => [r.id, r.currency]));
+    const { removed } = withoutCorrected(observations, priceCorrections);
     return {
       app: "hargana",
       exportedAt: clock.now().toISOString(),
@@ -37,7 +43,8 @@ export function exporter(storage: HarganaStorage, clock: Clock) {
       stores,
       categories,
       items,
-      observations: observations.map((o) => ({ ...o, currency: currency.get(o.regionId) ?? "" })),
+      observations: observations.map((o) => ({ ...o, currency: currency.get(o.regionId) ?? "", removed: removed.has(o.id) })),
+      priceCorrections,
       unknownBarcodes,
     };
   }
@@ -117,6 +124,7 @@ export function exporter(storage: HarganaStorage, clock: Clock) {
             "note",
             "source",
             "verified",
+            "removed",
           ],
           data.observations.map((o) => {
             const item = items.get(o.itemId);
@@ -144,6 +152,7 @@ export function exporter(storage: HarganaStorage, clock: Clock) {
               o.note,
               o.source,
               o.verified,
+              o.removed,
             ];
           }),
         ),

@@ -1,7 +1,7 @@
 import type { Clock } from "./clock";
 import { activeRegion } from "./places";
 import { SYNCED_TABLES, type HarganaStorage, type OutboxEntry } from "./storage";
-import type { Category, Chain, Item, PriceObservation, Region, Store, UnknownBarcodeScan } from "./types";
+import type { Category, Chain, Item, PriceCorrection, PriceObservation, Region, Store, UnknownBarcodeScan } from "./types";
 
 // The sync contract: the only thing the server and the device agree on.
 
@@ -13,6 +13,7 @@ export type SyncRecords = {
   stores: Store[];
   items: Item[];
   observations: PriceObservation[];
+  priceCorrections: PriceCorrection[];
   unknownBarcodes: UnknownBarcodeScan[];
 };
 
@@ -30,8 +31,8 @@ export type PushResponse = {
 
 /**
  * Everything changed after `cursor` (0 for everything): regions, categories
- * and items everywhere; chains, stores, observations and unknown-barcode scans
- * only in `regionIds`.
+ * and items everywhere; chains, stores, observations, price corrections and
+ * unknown-barcode scans only in `regionIds`.
  */
 export type PullRequest = { regionIds: string[]; cursor: number };
 export type PullResponse = SyncRecords & { cursor: number };
@@ -57,7 +58,16 @@ const PUSH_BATCH = 200;
 const SYNC_CURSORS = "syncCursors";
 
 export function emptyRecords(): SyncRecords {
-  return { regions: [], categories: [], chains: [], stores: [], items: [], observations: [], unknownBarcodes: [] };
+  return {
+    regions: [],
+    categories: [],
+    chains: [],
+    stores: [],
+    items: [],
+    observations: [],
+    priceCorrections: [],
+    unknownBarcodes: [],
+  };
 }
 
 export function sync(storage: HarganaStorage, clock: Clock) {
@@ -155,7 +165,8 @@ export function sync(storage: HarganaStorage, clock: Clock) {
 
   /**
    * Stores pulled records. Newer wins; a record changed here and not yet
-   * pushed is kept, and observations and scans never change once recorded.
+   * pushed is kept, and observations, corrections and scans never change once
+   * recorded.
    */
   async function apply(records: SyncRecords) {
     let count = 0;

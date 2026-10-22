@@ -94,6 +94,13 @@ export const observations = pgTable(
   (t) => [index().on(t.regionId, t.seq), index().on(t.itemId)],
 );
 
+/** Observations taken back as recorded by mistake. Append-only. */
+export const priceCorrections = pgTable(
+  "price_corrections",
+  { ...synced, regionId: text("region_id").notNull() },
+  (t) => [index().on(t.regionId, t.seq)],
+);
+
 /** Lookups of barcodes that were not in the catalog. Append-only. */
 export const unknownBarcodes = pgTable(
   "unknown_barcodes",
