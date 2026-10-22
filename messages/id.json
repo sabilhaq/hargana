@@ -76,7 +76,8 @@
     "storesHint": "Jaringan, cabang, dan pasar",
     "account": "Akun",
     "unknownBarcodesHint": "Barcode yang dipindai tapi belum ada",
-    "exportHint": "Unduh semua barang, toko, dan harga"
+    "exportHint": "Unduh semua barang, toko, dan harga",
+    "invitesHint": "Ajak teman ikut mencatat harga"
   },
   "Regions": {
     "title": "Wilayah",
@@ -297,5 +298,46 @@
   "Permissions": {
     "itemOwnerOnly": "Barang ini ditambahkan orang lain, jadi hanya pemilik Hargana yang bisa mengubahnya.",
     "settingsOwnerOnly": "Hanya pemilik Hargana yang bisa menambah atau mengubah ini."
+  },
+  "Invites": {
+    "title": "Undang teman",
+    "intro": "Buat satu tautan untuk setiap teman. Tautan hanya bisa dipakai sekali dan berlaku 7 hari. Teman yang diundang bisa menambah toko, barang, dan harga, tapi tidak bisa mengubah data yang kamu tambahkan.",
+    "name": "Untuk siapa (boleh dikosongkan)",
+    "create": "Buat tautan undangan",
+    "creating": "Membuat…",
+    "created": "Tautan undangan siap",
+    "createdFor": "Tautan undangan untuk {name} siap",
+    "onceHint": "Salin atau bagikan sekarang: tautan ini hanya ditampilkan sekali. Kalau hilang, batalkan dan buat yang baru.",
+    "copy": "Salin tautan",
+    "copied": "Tersalin ✓",
+    "share": "Bagikan",
+    "done": "Selesai",
+    "shareText": "Yuk bantu catat harga belanja di Hargana. Daftar lewat tautan ini (berlaku 7 hari): {url}",
+    "listTitle": "Undangan",
+    "none": "Belum ada undangan.",
+    "unnamed": "Tanpa nama",
+    "status_open": "Belum dipakai",
+    "status_used": "Sudah dipakai",
+    "status_expired": "Kedaluwarsa",
+    "status_cancelled": "Dibatalkan",
+    "until": "berlaku s.d. {date}",
+    "cancel": "Batalkan",
+    "ownerOnly": "Hanya pemilik Hargana yang bisa mengundang teman.",
+    "needsConnection": "Undangan butuh koneksi internet. Periksa koneksi lalu coba lagi."
+  },
+  "Invite": {
+    "checking": "Memeriksa undangan…",
+    "invalid": "Undangan ini sudah tidak berlaku: sudah dipakai, dibatalkan, atau kedaluwarsa. Minta tautan baru ke yang mengundangmu.",
+    "intro": "Kamu diundang untuk ikut mencatat harga. Buat akunmu:",
+    "name": "Nama",
+    "password": "Kata sandi baru",
+    "passwordHint": "Minimal 8 karakter.",
+    "submit": "Daftar dan masuk",
+    "error_invalid_invite": "Undangan ini sudah tidak berlaku. Minta tautan baru.",
+    "error_USER_ALREADY_EXISTS": "Email ini sudah terdaftar. Masuk saja lewat halaman masuk.",
+    "error_PASSWORD_TOO_SHORT": "Kata sandi terlalu pendek, minimal 8 karakter.",
+    "error_PASSWORD_TOO_LONG": "Kata sandi terlalu panjang.",
+    "error_INVALID_EMAIL": "Alamat email tidak valid.",
+    "error_unknown": "Gagal mendaftar. Periksa koneksi lalu coba lagi."
   }
 }

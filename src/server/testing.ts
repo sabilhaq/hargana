@@ -16,7 +16,8 @@ export const TEST_USERS = {
 // Starting PGlite and migrating takes seconds, so each test file shares one.
 let shared: Promise<ReturnType<typeof drizzle<typeof schema>>> | undefined;
 
-async function database() {
+/** The shared test database, emptied of synced data and invites. */
+export async function database() {
   shared ??= (async () => {
     const db = drizzle(new PGlite(), { schema });
     await migrate(db, { migrationsFolder: "./drizzle" });
@@ -24,7 +25,7 @@ async function database() {
     return db;
   })();
   const db = await shared;
-  await db.execute(sql`truncate regions, categories, chains, stores, items, observations, price_corrections, unknown_barcodes, item_aliases`);
+  await db.execute(sql`truncate regions, categories, chains, stores, items, observations, price_corrections, unknown_barcodes, item_aliases, invites`);
   return db;
 }
 
