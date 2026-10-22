@@ -269,5 +269,15 @@
     "removeChainHint": "Harga ini berlaku untuk semua cabang {chain}. Setelah dihapus, setiap cabang kembali ke harga sebelumnya, dan konfirmasi “Sama ✓” untuk harga ini ikut dihapus.",
     "keep": "Batal",
     "removeConfirm": "Ya, hapus"
+  },
+  "History": {
+    "title": "Riwayat harga",
+    "store": "Toko",
+    "allStores": "Semua toko",
+    "empty": "Belum ada harga tercatat di toko ini.",
+    "chartLabel": "Grafik harga dari waktu ke waktu per toko, dengan harga terendah 90 hari",
+    "today": "hari ini",
+    "lowest": "terendah 90 hari {price}",
+    "showAll": "Tampilkan semua ({count})"
   }
 }
