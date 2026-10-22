@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 import type { Chain, LatLng, Store, StoreType } from "@/core";
 import { useCore } from "../../core-provider";
+import { usePermissions } from "../../permissions";
 import {
   Button,
   Empty,
@@ -32,6 +33,7 @@ export default function StoresPage() {
   const regionId = chosenRegion ?? context?.activeRegion.id;
   const [chains, reloadChains] = useCoreData((c) => (regionId ? c.listChains(regionId) : Promise.resolve([])), [regionId]);
   const [stores, reloadStores] = useCoreData((c) => (regionId ? c.listStores(regionId) : Promise.resolve([])), [regionId]);
+  const { canEdit } = usePermissions();
   const [editing, setEditing] = useState<Editing>(null);
   const chainName = (id: string | null) => chains?.find((c) => c.id === id)?.name;
 
@@ -68,7 +70,7 @@ export default function StoresPage() {
             {stores?.map((store) => (
               <Row
                 key={store.id}
-                onClick={() => setEditing({ kind: "store", store })}
+                onClick={canEdit(store) ? () => setEditing({ kind: "store", store }) : undefined}
                 title={store.name}
                 detail={chainName(store.chainId) ?? tType(store.type)}
               />
@@ -90,7 +92,7 @@ export default function StoresPage() {
         ) : (
           <List>
             {chains?.map((chain) => (
-              <Row key={chain.id} onClick={() => setEditing({ kind: "chain", chain })} title={chain.name} />
+              <Row key={chain.id} onClick={canEdit(chain) ? () => setEditing({ kind: "chain", chain }) : undefined} title={chain.name} />
             ))}
           </List>
         )}

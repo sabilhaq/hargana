@@ -71,7 +71,7 @@ export function List({ children }: { children: ReactNode }) {
   );
 }
 
-/** A tappable list row. */
+/** A list row: tappable with `href` or `onClick`, otherwise plain. */
 export function Row({
   title,
   detail,
@@ -102,10 +102,12 @@ export function Row({
         <Link href={href} className={className}>
           {body}
         </Link>
-      ) : (
+      ) : onClick ? (
         <button type="button" onClick={onClick} className={className}>
           {body}
         </button>
+      ) : (
+        <div className={className.replace(/ hover:\S+| dark:hover:\S+/g, "")}>{body}</div>
       )}
     </li>
   );

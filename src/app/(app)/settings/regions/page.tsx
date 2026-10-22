@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 import type { Region } from "@/core";
 import { useCore } from "../../core-provider";
+import { usePermissions } from "../../permissions";
 import { Button, Field, FormActions, FormError, inputClass, List, Row, Screen, Sheet, useCoreData, useSave } from "../../ui";
 
 type Editing = Region | "new" | null;
@@ -12,6 +13,8 @@ export default function RegionsPage() {
   const t = useTranslations("Regions");
   const [regions, reload] = useCoreData((c) => c.listRegions());
   const [editing, setEditing] = useState<Editing>(null);
+  const { canManageSettings } = usePermissions();
+  const tp = useTranslations("Permissions");
 
   return (
     <Screen title={t("title")} back="/settings">
@@ -19,7 +22,7 @@ export default function RegionsPage() {
         {regions?.map((region) => (
           <Row
             key={region.id}
-            onClick={() => setEditing(region)}
+            onClick={canManageSettings ? () => setEditing(region) : undefined}
             title={region.name}
             detail={t("summary", {
               currency: region.currency,
@@ -29,9 +32,13 @@ export default function RegionsPage() {
           />
         ))}
       </List>
-      <Button variant="secondary" onClick={() => setEditing("new")}>
-        {t("add")}
-      </Button>
+      {canManageSettings ? (
+        <Button variant="secondary" onClick={() => setEditing("new")}>
+          {t("add")}
+        </Button>
+      ) : (
+        <p className="text-sm opacity-60">{tp("settingsOwnerOnly")}</p>
+      )}
 
       <Sheet open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? t("add") : t("edit")}>
         {editing && (

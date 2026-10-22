@@ -19,6 +19,7 @@ export { PRICING_UNITS, SIZE_UNITS } from "./types";
 export type * from "./types";
 export { compatibleUnits, perUnitPrice } from "./units";
 export { emptyRecords } from "./sync";
+export { canEdit, canManageSettings, canRemovePrice } from "./permissions";
 export type { ExportData } from "./export";
 export { MAX_PHOTO_BYTES, MAX_THUMB_BYTES } from "./photos";
 export type * from "./sync";

@@ -33,7 +33,7 @@ export function people(storage: HarganaStorage) {
   return {
     /** Called with the signed-in user whenever the app knows it; new records are stamped with it. */
     async setCurrentUser(user: User | null) {
-      if (user) await storage.settings.put({ key: CURRENT_USER, value: { id: user.id, name: user.name } });
+      if (user) await storage.settings.put({ key: CURRENT_USER, value: { id: user.id, name: user.name, role: user.role } });
       else await storage.settings.delete(CURRENT_USER);
     },
     /** The signed-in user as last known on this device. */

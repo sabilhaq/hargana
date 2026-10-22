@@ -1,8 +1,11 @@
 // Domain records as the core hands them to the UI. Ids are client-generated
 // UUIDs; `updatedAt` is an ISO timestamp used by sync.
 
-/** A person using Hargana (an account on the server). */
-export type User = { id: string; name: string };
+/** What a person may do: the owner runs Hargana; contributors help collect prices. */
+export type Role = "owner" | "contributor";
+
+/** A person using Hargana (an account on the server). `role` is known once signed in. */
+export type User = { id: string; name: string; role?: Role };
 
 /** Who recorded something, for display: `name` is null when unknown on this device. */
 export type Recorder = { id: string; name: string | null; isMe: boolean };
@@ -15,6 +18,8 @@ export type Region = {
   locale: string;
   staleDaysMarket: number;
   staleDaysSupermarket: number;
+  /** Who added it; set by the server. Absent on data from before this was kept, which only the owner may change. */
+  createdBy?: string | null;
   updatedAt: string;
 };
 
@@ -22,6 +27,8 @@ export type Chain = {
   id: string;
   regionId: string;
   name: string;
+  /** Who added it; set by the server. Absent on data from before this was kept, which only the owner may change. */
+  createdBy?: string | null;
   updatedAt: string;
 };
 
@@ -37,6 +44,8 @@ export type Store = {
   address?: string;
   lat?: number;
   lng?: number;
+  /** Who added it; set by the server. Absent on data from before this was kept, which only the owner may change. */
+  createdBy?: string | null;
   updatedAt: string;
 };
 
@@ -44,6 +53,8 @@ export type Category = {
   id: string;
   name: string;
   sortOrder: number;
+  /** Who added it; set by the server. Absent on data from before this was kept, which only the owner may change. */
+  createdBy?: string | null;
   updatedAt: string;
 };
 
@@ -99,6 +110,8 @@ export type Commodity = {
   pricingUnit: PricingUnit;
   photo?: ItemPhoto;
   createdAt: string;
+  /** Who added it; set by the server. Absent on data from before this was kept, which only the owner may change. */
+  createdBy?: string | null;
   updatedAt: string;
 };
 
@@ -120,6 +133,8 @@ export type Product = {
   categoryId: string | null;
   photo?: ItemPhoto;
   createdAt: string;
+  /** Who added it; set by the server. Absent on data from before this was kept, which only the owner may change. */
+  createdBy?: string | null;
   updatedAt: string;
 };
 

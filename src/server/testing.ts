@@ -8,7 +8,10 @@ import { createPhotoHandlers, memoryPhotoStore } from "./photos";
 import { createSyncHandlers } from "./sync";
 
 /** Accounts on the test server. */
-export const TEST_USERS = { owner: { id: "user-owner", name: "Sabil" }, budi: { id: "user-budi", name: "Budi" } };
+export const TEST_USERS = {
+  owner: { id: "user-owner", name: "Sabil", role: "owner" as const },
+  budi: { id: "user-budi", name: "Budi", role: "contributor" as const },
+};
 
 // Starting PGlite and migrating takes seconds, so each test file shares one.
 let shared: Promise<ReturnType<typeof drizzle<typeof schema>>> | undefined;
@@ -32,8 +35,8 @@ async function database() {
  */
 export async function testServer() {
   const db = await database();
-  let signedIn: string | null = TEST_USERS.owner.id;
-  const session = async () => (signedIn ? { user: { id: signedIn } } : null);
+  let signedIn: { id: string; role: string } | null = TEST_USERS.owner;
+  const session = async () => (signedIn ? { user: signedIn } : null);
   const handlers = createSyncHandlers({ db, session });
   const photoStore = memoryPhotoStore();
   const photos = createPhotoHandlers({ store: photoStore, session });
@@ -74,7 +77,7 @@ export async function testServer() {
     serve,
     photoStore,
     transport,
-    signInAs: (user: { id: string }) => (signedIn = user.id),
+    signInAs: (user: { id: string; role: string }) => (signedIn = user),
     signOut: () => (signedIn = null),
   };
 }

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useDescribeItem } from "../items/describe";
 import { ItemPhoto } from "../items/photo";
+import { usePermissions } from "../permissions";
 import { Empty, Screen, useCoreData } from "../ui";
 import { PricePanel } from "./price-panel";
 
@@ -26,6 +27,7 @@ function ItemDetails() {
   const [item] = useCoreData((core) => core.getItem(id).catch(() => null), [id]);
   const [categories] = useCoreData((core) => core.listCategories());
   const category = item && categories?.find((c) => c.id === item.categoryId);
+  const { canEdit } = usePermissions();
 
   if (item === null) {
     return (
@@ -65,12 +67,14 @@ function ItemDetails() {
             <ItemPhoto itemId={item.id} version={item.updatedAt} />
           </div>
           <PricePanel item={item} startChanging={params.get("change") === "1"} />
-          <Link
-            href={`/items/edit?id=${item.id}`}
-            className="rounded-lg border border-neutral-300 px-4 py-3 text-center font-semibold dark:border-neutral-700"
-          >
-            {t("edit")}
-          </Link>
+          {canEdit(item) && (
+            <Link
+              href={`/items/edit?id=${item.id}`}
+              className="rounded-lg border border-neutral-300 px-4 py-3 text-center font-semibold dark:border-neutral-700"
+            >
+              {t("edit")}
+            </Link>
+          )}
         </>
       )}
     </Screen>

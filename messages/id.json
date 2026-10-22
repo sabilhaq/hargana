@@ -224,7 +224,9 @@
     "pending": "{count, plural, other {# menunggu sinkron}}",
     "offline": "Offline · {count, plural, other {# menunggu}}",
     "retry": "Ketuk untuk sinkron sekarang",
-    "signedOut": "Masuk lagi untuk sinkron"
+    "signedOut": "Masuk lagi untuk sinkron",
+    "refused": "{count, plural, other {# perubahan dibatalkan}}: hanya pemilik Hargana yang bisa mengubah data yang ditambahkan orang lain.",
+    "closeNotice": "Tutup"
   },
   "Photos": {
     "label": "Foto (boleh dilewati)",
@@ -291,5 +293,9 @@
   "Recorder": {
     "me": "kamu",
     "unknown": "pengguna lain"
+  },
+  "Permissions": {
+    "itemOwnerOnly": "Barang ini ditambahkan orang lain, jadi hanya pemilik Hargana yang bisa mengubahnya.",
+    "settingsOwnerOnly": "Hanya pemilik Hargana yang bisa menambah atau mengubah ini."
   }
 }

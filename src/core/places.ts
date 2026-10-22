@@ -1,5 +1,6 @@
 import type { Clock } from "./clock";
 import { CoreError } from "./errors";
+import { recorderId } from "./people";
 import { GARUT_REGION_ID } from "./seed";
 import type { HarganaStorage } from "./storage";
 import type { Category, Chain, CoreContext, Input, LatLng, Region, Store, StoreMatch } from "./types";
@@ -22,9 +23,10 @@ export function places(storage: HarganaStorage, clock: Clock) {
     return (await storage.settings.get(key))?.value as T | undefined;
   }
 
-  /** The saved form of an input: a new id when creating, and a fresh timestamp. */
-  function stamp<T extends { id: string; updatedAt: string }>(input: Input<T>) {
-    return { ...input, id: input.id ?? crypto.randomUUID(), updatedAt: now() } as T;
+  /** The saved form of an input: a new id and its creator when creating, and a fresh timestamp. */
+  async function stamp<T extends { id: string; updatedAt: string }>(input: Input<T>) {
+    const created = input.id ? {} : { createdBy: await recorderId(storage) };
+    return { ...input, ...created, id: input.id ?? crypto.randomUUID(), updatedAt: now() } as T;
   }
 
   const activeRegionId = () => activeRegion(storage);
@@ -41,7 +43,7 @@ export function places(storage: HarganaStorage, clock: Clock) {
       }
       return storage.saveSynced(
         "regions",
-        stamp<Region>({
+        await stamp<Region>({
           ...input,
           name: input.name.trim(),
           currency: input.currency.trim().toUpperCase(),
@@ -55,7 +57,7 @@ export function places(storage: HarganaStorage, clock: Clock) {
     async saveChain(input: Input<Chain>) {
       required(input.name, "name");
       must(await storage.regions.get(input.regionId), "Region", input.regionId);
-      return storage.saveSynced("chains", stamp<Chain>({ ...input, name: input.name.trim() }));
+      return storage.saveSynced("chains", await stamp<Chain>({ ...input, name: input.name.trim() }));
     },
 
     listStores: (regionId?: string) =>
@@ -71,7 +73,7 @@ export function places(storage: HarganaStorage, clock: Clock) {
       } else if (input.chainId) {
         throw new CoreError("market_has_no_chain");
       }
-      return storage.saveSynced("stores", stamp<Store>({ ...input, name: input.name.trim() }));
+      return storage.saveSynced("stores", await stamp<Store>({ ...input, name: input.name.trim() }));
     },
 
     /**
@@ -118,7 +120,7 @@ export function places(storage: HarganaStorage, clock: Clock) {
     listCategories: () => storage.categories.orderBy("sortOrder").toArray(),
     async saveCategory(input: Input<Category>) {
       required(input.name, "name");
-      return storage.saveSynced("categories", stamp<Category>({ ...input, name: input.name.trim() }));
+      return storage.saveSynced("categories", await stamp<Category>({ ...input, name: input.name.trim() }));
     },
 
     /**
