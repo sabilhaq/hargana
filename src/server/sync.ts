@@ -8,20 +8,25 @@ import {
   type PullResponse,
   type PushRequest,
   type PushResponse,
+  type Refusal,
+  type Role,
   type SyncRecords,
 } from "@/core";
 import * as schema from "./db/schema";
 
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 /** The signed-in user of a request, or null. */
-type Session = (request: Request) => Promise<{ user: { id: string } } | null>;
+type Session = (request: Request) => Promise<{ user: { id: string; role?: string | null } } | null>;
+
+/** Who is pushing. Anyone not marked owner is treated as a contributor. */
+export type Pusher = { id: string; role: Role };
 
 /**
  * The sync API: POST handlers for push and pull. Both require a signed-in
  * session (`session` resolves to null without one).
  */
 export function createSyncHandlers({ db, session }: { db: Db; session: Session }) {
-  async function handle(request: Request, run: (body: unknown, userId: string) => Promise<unknown>) {
+  async function handle(request: Request, run: (body: unknown, pusher: Pusher) => Promise<unknown>) {
     const signedIn = await session(request);
     if (!signedIn) return Response.json({ error: "unauthorized" }, { status: 401 });
     let body: unknown;
@@ -31,7 +36,8 @@ export function createSyncHandlers({ db, session }: { db: Db; session: Session }
       return Response.json({ error: "invalid_json" }, { status: 400 });
     }
     try {
-      return Response.json(await run(body, signedIn.user.id));
+      const pusher: Pusher = { id: signedIn.user.id, role: signedIn.user.role === "owner" ? "owner" : "contributor" };
+      return Response.json(await run(body, pusher));
     } catch (error) {
       if (error instanceof BadRequest) return Response.json({ error: error.message }, { status: 400 });
       throw error;
@@ -39,7 +45,7 @@ export function createSyncHandlers({ db, session }: { db: Db; session: Session }
   }
 
   return {
-    push: (request: Request) => handle(request, (body, userId) => push(db, parsePush(body), userId)),
+    push: (request: Request) => handle(request, (body, pusher) => push(db, parsePush(body), pusher)),
     pull: (request: Request) => handle(request, (body) => pull(db, parsePull(body))),
   };
 }
@@ -50,14 +56,27 @@ export function createSyncHandlers({ db, session }: { db: Db; session: Session }
  * no-op. A product whose barcode is already stored under another id is not
  * stored: the response maps it to the stored one. Prices, corrections and
  * scans are stamped with the pushing user, whatever the device claimed.
+ *
+ * Roles: the owner may change anything. A contributor may add chains, stores,
+ * items and prices, change only what they added, and remove only prices they
+ * recorded; anything else is refused (listed in the response, with the
+ * server's version to restore) and the rest of the batch is still stored.
  */
-export async function push(db: Db, batch: PushRequest, userId: string): Promise<PushResponse> {
+export async function push(db: Db, batch: PushRequest, pusher: Pusher): Promise<PushResponse> {
   const { regions, categories, chains, stores, items, observations, priceCorrections, unknownBarcodes, itemAliases } = schema;
+  const userId = pusher.id;
+  const outcome = refusals();
+  const allowed = <R extends { id: string; createdBy?: string | null }>(
+    table: MutableTable,
+    name: keyof SyncRecords,
+    records: R[],
+    contributorsMayAdd: boolean,
+  ) => vet(db, table, name, records, pusher, contributorsMayAdd, outcome);
 
-  await upsert(db, regions, batch.regions.map((r) => row(r)));
-  await upsert(db, categories, batch.categories.map((r) => row(r)));
-  await upsert(db, chains, batch.chains.map((r) => ({ ...row(r), regionId: r.regionId })));
-  await upsert(db, stores, batch.stores.map((r) => ({ ...row(r), regionId: r.regionId })));
+  await upsert(db, regions, (await allowed(regions, "regions", batch.regions, false)).map((r) => row(r)));
+  await upsert(db, categories, (await allowed(categories, "categories", batch.categories, false)).map((r) => row(r)));
+  await upsert(db, chains, (await allowed(chains, "chains", batch.chains, true)).map((r) => ({ ...row(r), regionId: r.regionId })));
+  await upsert(db, stores, (await allowed(stores, "stores", batch.stores, true)).map((r) => ({ ...row(r), regionId: r.regionId })));
 
   const mappings: Record<string, string> = {};
   const kept: Item[] = [];
@@ -72,7 +91,8 @@ export async function push(db: Db, batch: PushRequest, userId: string): Promise<
     kept.push(owner.data as Item);
     return false;
   });
-  await upsert(db, items, newItems.map((i) => ({ ...row(i), barcode: i.kind === "product" ? i.barcode : null })));
+  const permitted = await allowed(items, "items", newItems, true);
+  await upsert(db, items, permitted.map((i) => ({ ...row(i), barcode: i.kind === "product" ? i.barcode : null })));
   const newAliases = Object.entries(mappings).map(([fromId, toId]) => ({ fromId, toId }));
   if (newAliases.length) await db.insert(itemAliases).values(newAliases).onConflictDoNothing();
 
@@ -89,7 +109,23 @@ export async function push(db: Db, batch: PushRequest, userId: string): Promise<
   });
   if (rows.length) await db.insert(observations).values(rows).onConflictDoNothing();
 
-  const corrections = batch.priceCorrections.map((c) => ({
+  // A contributor may only take back their own prices.
+  const targets = new Map(
+    pusher.role === "owner" || batch.priceCorrections.length === 0
+      ? []
+      : (
+          await db
+            .select({ id: observations.id, data: observations.data })
+            .from(observations)
+            .where(inArray(observations.id, batch.priceCorrections.map((c) => c.observationId)))
+        ).map((o) => [o.id, (o.data as PriceObservation).recordedBy]),
+  );
+  const ownCorrections = batch.priceCorrections.filter((c) => {
+    if (pusher.role === "owner" || (targets.get(c.observationId) ?? null) === userId) return true;
+    outcome.refuse("priceCorrections", c.id);
+    return false;
+  });
+  const corrections = ownCorrections.map((c) => ({
     id: c.id,
     updatedAt: c.correctedAt,
     data: { ...c, recordedBy: userId },
@@ -105,7 +141,7 @@ export async function push(db: Db, batch: PushRequest, userId: string): Promise<
   }));
   if (scans.length) await db.insert(unknownBarcodes).values(scans).onConflictDoNothing();
 
-  return { mappings, items: kept };
+  return { mappings, items: kept, ...outcome.result() };
 }
 
 /**
@@ -162,6 +198,50 @@ export async function pull(db: Db, { regionIds, cursor }: PullRequest): Promise<
 
 function row(record: { id: string; updatedAt: string }) {
   return { id: record.id, updatedAt: record.updatedAt, data: record };
+}
+
+/** Collects refused records and the server's versions of them. */
+function refusals() {
+  const refused: Refusal[] = [];
+  const restore: Partial<Record<keyof SyncRecords, unknown[]>> = {};
+  return {
+    refuse(table: keyof SyncRecords, id: string, stored?: unknown) {
+      refused.push({ table, id });
+      if (stored) (restore[table] ??= []).push(stored);
+    },
+    result: () => (refused.length ? { refused, restore: restore as Partial<SyncRecords> } : {}),
+  };
+}
+
+/**
+ * The records this user may store, with `createdBy` set by the server: the
+ * pusher on a new record, kept as stored on an update.
+ */
+async function vet<R extends { id: string; createdBy?: string | null }>(
+  db: Db,
+  table: MutableTable,
+  name: keyof SyncRecords,
+  records: R[],
+  pusher: Pusher,
+  contributorsMayAdd: boolean,
+  outcome: ReturnType<typeof refusals>,
+): Promise<R[]> {
+  if (records.length === 0) return [];
+  // Every synced table has the same id and data columns.
+  const t = table as typeof schema.regions;
+  const rows = await db.select({ id: t.id, data: t.data }).from(t).where(inArray(t.id, records.map((r) => r.id)));
+  const stored = new Map(rows.map((r) => [r.id, r.data as R]));
+  const owner = pusher.role === "owner";
+  return records.flatMap((record) => {
+    const current = stored.get(record.id);
+    if (!current) {
+      if (owner || contributorsMayAdd) return [{ ...record, createdBy: pusher.id }];
+    } else if (owner || (!!current.createdBy && current.createdBy === pusher.id)) {
+      return [{ ...record, createdBy: current.createdBy ?? null }];
+    }
+    outcome.refuse(name, record.id, current);
+    return [];
+  });
 }
 
 type MutableTable = typeof schema.regions | typeof schema.categories | typeof schema.chains | typeof schema.stores | typeof schema.items;

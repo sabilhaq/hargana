@@ -33,7 +33,12 @@ describe("who recorded a price", () => {
 
     expect(first.observations[0].recordedBy).toBe(budi.id);
     expect(await pull()).toEqual(first);
-    expect(first.users).toEqual(expect.arrayContaining([owner, budi]));
+    expect(first.users).toEqual(
+      expect.arrayContaining([
+        { id: owner.id, name: owner.name },
+        { id: budi.id, name: budi.name },
+      ]),
+    );
   });
 
   it("shows each person's name on every device, and 'me' for my own", async () => {

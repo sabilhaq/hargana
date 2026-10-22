@@ -44,3 +44,5 @@ With `DATABASE_URL` empty, the server uses an embedded PGlite database on disk, 
 3. Set `BETTER_AUTH_SECRET` (random, 32+ chars) and `BETTER_AUTH_URL` (the production URL).
 4. Create a Blob store (Storage → Blob) and connect it to the project, for product photos. Locally, photos are kept in `.data/photos` instead.
 5. Put Neon's `DATABASE_URL` into your local `.env` temporarily, then run `pnpm db:migrate` and `pnpm user:create <email> <password>` with your real credentials. Clear `DATABASE_URL` again afterwards to go back to the local database.
+
+Production deploys migrate the database themselves: Vercel runs `pnpm vercel-build`, which applies pending migrations before building, on production builds only (previews share the database, so they never migrate). A failed migration fails the deploy and the previous version stays live. Migrations must therefore keep the code that is live working until the new deploy is up (add columns with defaults; don't rename or drop in one step).

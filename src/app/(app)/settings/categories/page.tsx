@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 import type { Category } from "@/core";
 import { useCore } from "../../core-provider";
+import { usePermissions } from "../../permissions";
 import { Button, Field, FormActions, FormError, inputClass, List, Row, Screen, Sheet, useCoreData, useSave } from "../../ui";
 
 type Editing = Category | "new" | null;
@@ -12,18 +13,24 @@ export default function CategoriesPage() {
   const t = useTranslations("Categories");
   const [categories, reload] = useCoreData((c) => c.listCategories());
   const [editing, setEditing] = useState<Editing>(null);
+  const { canManageSettings } = usePermissions();
+  const tp = useTranslations("Permissions");
   const nextOrder = ((categories?.at(-1)?.sortOrder ?? 0) + 10);
 
   return (
     <Screen title={t("title")} back="/settings">
       <List>
         {categories?.map((category) => (
-          <Row key={category.id} onClick={() => setEditing(category)} title={category.name} />
+          <Row key={category.id} onClick={canManageSettings ? () => setEditing(category) : undefined} title={category.name} />
         ))}
       </List>
-      <Button variant="secondary" onClick={() => setEditing("new")}>
-        {t("add")}
-      </Button>
+      {canManageSettings ? (
+        <Button variant="secondary" onClick={() => setEditing("new")}>
+          {t("add")}
+        </Button>
+      ) : (
+        <p className="text-sm opacity-60">{tp("settingsOwnerOnly")}</p>
+      )}
 
       <Sheet open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? t("add") : t("edit")}>
         {editing && (

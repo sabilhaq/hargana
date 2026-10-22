@@ -44,6 +44,7 @@ export function catalog(storage: HarganaStorage, clock: Clock, metadata?: Produc
       aliases: cleanAliases(input.aliases, name),
       categoryId: input.categoryId || null,
       ...(existing?.photo && { photo: existing.photo }),
+      createdBy: existing ? (existing.createdBy ?? null) : await recorderId(storage),
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };

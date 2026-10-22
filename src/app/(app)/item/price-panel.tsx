@@ -17,6 +17,7 @@ import { parseAmount } from "@/lib/money";
 import { useCore } from "../core-provider";
 import { Button, Empty, Field, FormError, inputClass, List, Section, Sheet, useCoreData, useSave } from "../ui";
 import { useMoney } from "./money";
+import { usePermissions } from "../permissions";
 import { useRecorderName } from "./recorder";
 import { PriceHistorySection } from "./price-history";
 
@@ -316,6 +317,7 @@ function PriceDetails({
   const { saving, error, run } = useSave();
   const [confirming, setConfirming] = useState(false);
   const recorderName = useRecorderName();
+  const { canRemovePrice } = usePermissions();
   const o = price?.observation;
 
   function close() {
@@ -392,9 +394,11 @@ function PriceDetails({
               </div>
             </div>
           ) : (
-            <Button variant="ghost" onClick={() => setConfirming(true)} className="text-red-700! dark:text-red-400!">
-              {t("remove")}
-            </Button>
+            canRemovePrice(o) && (
+              <Button variant="ghost" onClick={() => setConfirming(true)} className="text-red-700! dark:text-red-400!">
+                {t("remove")}
+              </Button>
+            )
           )}
         </div>
       )}

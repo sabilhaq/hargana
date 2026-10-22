@@ -16,6 +16,7 @@ import {
 } from "@/core";
 import { compressPhoto, type CompressedPhoto } from "@/lib/photo";
 import { useCore } from "../../core-provider";
+import { usePermissions } from "../../permissions";
 import { ItemPhoto, useBytesUrl } from "../photo";
 import { Empty, Field, FormActions, FormError, inputClass, Screen, useCoreData, useSave } from "../../ui";
 
@@ -42,6 +43,9 @@ function EditItem() {
   );
   const [categories] = useCoreData((core) => core.listCategories());
   const kind = item && item !== "missing" ? item.kind : params.get("kind") === "product" ? "product" : "commodity";
+  const { canEdit } = usePermissions();
+  const tp = useTranslations("Permissions");
+  const locked = !!item && item !== "missing" && !canEdit(item);
   const title = id ? t("edit") : kind === "product" ? t("addProduct") : t("add");
   const barcode = params.get("barcode") ?? "";
   const lookUp = !id && kind === "product" && barcode !== "";
@@ -50,8 +54,9 @@ function EditItem() {
   return (
     <Screen title={title} back="/">
       {item === "missing" && <Empty>{t("notFound")}</Empty>}
+      {locked && <Empty>{tp("itemOwnerOnly")}</Empty>}
       {suggested === undefined && <Empty>{t("lookingUp")}</Empty>}
-      {item !== undefined && item !== "missing" && categories && suggested !== undefined && (
+      {item !== undefined && item !== "missing" && !locked && categories && suggested !== undefined && (
         <ItemForm
           key={item?.id ?? kind}
           kind={kind}

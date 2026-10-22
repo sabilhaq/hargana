@@ -28,7 +28,14 @@ export type PushResponse = {
    */
   mappings: Record<string, string>;
   items: Item[];
+  /** Records the pushing user may not create or change; nothing of them was stored. */
+  refused?: Refusal[];
+  /** The server's versions of refused records it has, to put back on the device. */
+  restore?: Partial<SyncRecords>;
 };
+
+/** A pushed record the server did not store, because the user's role does not allow it. */
+export type Refusal = { table: keyof SyncRecords; id: string };
 
 /**
  * Everything changed after `cursor` (0 for everything): regions, categories
@@ -52,7 +59,8 @@ export type SyncTransport = {
   download(url: string): Promise<ArrayBuffer>;
 };
 
-export type SyncReport = { photos: number; pushed: number; pulled: number };
+/** `refused`: local changes the server did not accept for this user's role; they were undone here. */
+export type SyncReport = { photos: number; pushed: number; pulled: number; refused: number };
 
 /** Records sent per push request. */
 const PUSH_BATCH = 200;
@@ -114,20 +122,24 @@ export function sync(storage: HarganaStorage, clock: Clock) {
 
   async function push(transport: SyncTransport) {
     let pushed = 0;
+    let refused = 0;
     for (;;) {
       const entries = await storage.outbox.orderBy("createdAt").limit(PUSH_BATCH).toArray();
-      if (entries.length === 0) return pushed;
+      if (entries.length === 0) return { pushed, refused };
       const batch = emptyRecords();
       for (const entry of entries) {
         const record = await storage.table(entry.table).get(entry.recordId);
         if (record) (batch[entry.table] as unknown[]).push(record);
       }
       const response = await transport.push(batch);
-      await storage.transaction("rw", [storage.outbox, storage.items, storage.observations], async () => {
+      const tables = SYNCED_TABLES.map((t) => storage.table(t));
+      await storage.transaction("rw", [storage.outbox, ...tables], async () => {
         await settle(entries);
         await applyMappings(response);
+        await undoRefused(response);
       });
       pushed += entries.length;
+      refused += response.refused?.length ?? 0;
     }
   }
 
@@ -145,6 +157,19 @@ export function sync(storage: HarganaStorage, clock: Clock) {
       await storage.observations.where({ itemId: from }).modify({ itemId: to });
       await storage.items.delete(from);
       await storage.outbox.delete(`items:${from}`);
+    }
+  }
+
+  /**
+   * Changes the server refused (the user's role does not allow them) are
+   * undone: the server's version is put back, or the record removed if the
+   * server never had it.
+   */
+  async function undoRefused({ refused = [], restore = {} }: PushResponse) {
+    for (const { table, id } of refused) {
+      const server = (restore[table] as { id: string }[] | undefined)?.find((r) => r.id === id);
+      if (server) await storage.table(table).put(server);
+      else await storage.table(table).delete(id);
     }
   }
 
@@ -205,10 +230,10 @@ export function sync(storage: HarganaStorage, clock: Clock) {
       running ??= (async () => {
         try {
           const photos = await uploadPhotos(transport);
-          const pushed = await push(transport);
+          const { pushed, refused } = await push(transport);
           const pulled = await pull(transport);
           await downloadThumbs(transport);
-          return { photos, pushed, pulled };
+          return { photos, pushed, pulled, refused };
         } finally {
           running = null;
         }
