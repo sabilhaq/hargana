@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { emptyRecords, type HarganaCore, type PullResponse } from "@/core";
 import { testCore } from "@/core/testing";
-import { testServer } from "./testing";
+import { TEST_USERS, testServer } from "./testing";
 
 const INDOMIE = "089686010947";
 
@@ -128,6 +128,9 @@ describe("round trip", () => {
     const { transport } = await testServer();
     const a = testCore().core;
     const b = testCore().core;
+    // Both of the owner's devices are signed in as the owner.
+    await a.setCurrentUser(TEST_USERS.owner);
+    await b.setCurrentUser(TEST_USERS.owner);
     const { kota, guntur } = await setUp(a);
     const indomie = await a.saveProduct({ barcode: INDOMIE, name: "Indomie Goreng", aliases: ["mie"], categoryId: null });
     const cabai = await a.saveCommodity({ name: "Cabai rawit", pricingUnit: "kg", categoryId: null, aliases: ["cengek"] });

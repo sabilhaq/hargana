@@ -2,6 +2,7 @@ import Fuse from "fuse.js";
 import { parseBarcode } from "./barcode";
 import type { Clock } from "./clock";
 import { CoreError } from "./errors";
+import { recorderId } from "./people";
 import { activeRegion } from "./places";
 import type { HarganaStorage } from "./storage";
 import {
@@ -105,6 +106,7 @@ export function catalog(storage: HarganaStorage, clock: Clock, metadata?: Produc
         barcode: parsed.barcode,
         regionId: await activeRegion(storage),
         scannedAt: clock.now().toISOString(),
+        recordedBy: await recorderId(storage),
       });
       return { status: "unknown", barcode: parsed.barcode };
     },

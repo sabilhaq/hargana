@@ -2,6 +2,7 @@ import { liveQuery } from "dexie";
 import { catalog } from "./catalog";
 import { exporter } from "./export";
 import { systemClock, type Clock } from "./clock";
+import { people } from "./people";
 import { photos } from "./photos";
 import { places } from "./places";
 import { prices } from "./prices";
@@ -58,6 +59,7 @@ export function createCore({ storage = new HarganaStorage(), clock = systemClock
     ...placesApi,
     ...catalog(storage, clock, metadata),
     ...prices(storage, clock, placesApi.context),
+    ...people(storage),
     ...photos(storage, clock),
     ...exporter(storage, clock),
     ...sync(storage, clock),

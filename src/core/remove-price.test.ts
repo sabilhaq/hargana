@@ -119,6 +119,6 @@ describe("removing a price recorded by mistake", () => {
       [typo.id, true],
     ]);
     expect(data.priceCorrections).toMatchObject([{ observationId: typo.id }]);
-    expect((await core.exportCsv())["observations.csv"]).toMatch(/,true,true\r\n$/);
+    expect((await core.exportCsv())["observations.csv"]).toMatch(/,true,true,\r\n$/); // removed, then no recorder
   });
 });

@@ -1,7 +1,8 @@
 import type { Clock } from "./clock";
+import { saveUserNames } from "./people";
 import { activeRegion } from "./places";
 import { SYNCED_TABLES, type HarganaStorage, type OutboxEntry } from "./storage";
-import type { Category, Chain, Item, PriceCorrection, PriceObservation, Region, Store, UnknownBarcodeScan } from "./types";
+import type { Category, Chain, Item, PriceCorrection, PriceObservation, Region, Store, UnknownBarcodeScan, User } from "./types";
 
 // The sync contract: the only thing the server and the device agree on.
 
@@ -35,7 +36,8 @@ export type PushResponse = {
  * unknown-barcode scans only in `regionIds`.
  */
 export type PullRequest = { regionIds: string[]; cursor: number };
-export type PullResponse = SyncRecords & { cursor: number };
+/** Also every user's name, so "dicatat oleh …" reads offline. */
+export type PullResponse = SyncRecords & { cursor: number; users?: User[] };
 
 /** A photo to upload: JPEG bytes of the image and its thumbnail. Uploading the same id again replaces it. */
 export type PhotoUpload = { id: string; image: ArrayBuffer; thumb: ArrayBuffer };
@@ -157,6 +159,7 @@ export function sync(storage: HarganaStorage, clock: Clock) {
     for (const [cursor, regionIds] of groups) {
       const response = await transport.pull({ regionIds, cursor });
       pulled += await apply(response);
+      await saveUserNames(storage, response.users ?? []);
       for (const id of regionIds) cursors[id] = response.cursor;
     }
     await storage.settings.put({ key: SYNC_CURSORS, value: cursors });

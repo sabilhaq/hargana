@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { createContext, use, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { CoreStatus } from "@/core";
+import { authClient } from "@/lib/auth-client";
 import { httpTransport, SignedOutError } from "@/lib/sync-transport";
 import { useCore } from "./core-provider";
 
@@ -23,6 +24,14 @@ const SyncContext = createContext<SyncState | null>(null);
  */
 export function SyncProvider({ children }: { children: ReactNode }) {
   const core = useCore();
+  const { data: session } = authClient.useSession();
+
+  // New prices are stamped with the signed-in user; the core keeps it for offline use.
+  const userId = session?.user.id;
+  const userName = session?.user.name;
+  useEffect(() => {
+    if (userId) void core.setCurrentUser({ id: userId, name: userName ?? "" });
+  }, [core, userId, userName]);
   const [phase, setPhase] = useState<Phase>("idle");
   const [status, setStatus] = useState<CoreStatus | null>(null);
   const pending = useRef(0);
