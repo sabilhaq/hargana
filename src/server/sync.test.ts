@@ -200,3 +200,30 @@ describe("unknown barcode scans", () => {
     expect(await b.listUnknownBarcodes()).toMatchObject([{ barcode: "8992388101016", count: 2 }]);
   });
 });
+
+describe("price corrections", () => {
+  it("reach the other devices, and pushing them twice changes nothing", async () => {
+    const { call, transport } = await testServer();
+    const { core: a, clock } = testCore();
+    const b = testCore().core;
+    const { regionId, guntur } = await setUp(a);
+    const cabai = await a.saveCommodity({ name: "Cabai rawit", pricingUnit: "kg", categoryId: null, aliases: [] });
+    await a.setCurrentStore(guntur.id);
+    await a.recordPrice({ itemId: cabai.id, amount: 40000, qty: 1, unit: "kg" });
+    clock.advance(60_000);
+    const typo = await a.recordPrice({ itemId: cabai.id, amount: 4000, qty: 1, unit: "kg" });
+    await a.sync(transport);
+    await b.sync(transport);
+    expect((await b.itemPrices(cabai.id)).rows[0]).toMatchObject({ price: 4000 });
+
+    const correction = await a.removePrice(typo.id);
+    await a.sync(transport);
+    const before = await pullAll(call, [regionId]);
+    await transport.push({ ...emptyRecords(), priceCorrections: [correction] });
+    expect(await pullAll(call, [regionId])).toEqual(before);
+    expect(before.observations).toHaveLength(2);
+
+    await b.sync(transport);
+    expect((await b.itemPrices(cabai.id)).rows[0]).toMatchObject({ price: 40000 });
+  });
+});
