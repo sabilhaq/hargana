@@ -13,15 +13,17 @@ import {
 import * as schema from "./db/schema";
 
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
-type Session = (request: Request) => Promise<unknown>;
+/** The signed-in user of a request, or null. */
+type Session = (request: Request) => Promise<{ user: { id: string } } | null>;
 
 /**
  * The sync API: POST handlers for push and pull. Both require a signed-in
  * session (`session` resolves to null without one).
  */
 export function createSyncHandlers({ db, session }: { db: Db; session: Session }) {
-  async function handle(request: Request, run: (body: unknown) => Promise<unknown>) {
-    if (!(await session(request))) return Response.json({ error: "unauthorized" }, { status: 401 });
+  async function handle(request: Request, run: (body: unknown, userId: string) => Promise<unknown>) {
+    const signedIn = await session(request);
+    if (!signedIn) return Response.json({ error: "unauthorized" }, { status: 401 });
     let body: unknown;
     try {
       body = await request.json();
@@ -29,7 +31,7 @@ export function createSyncHandlers({ db, session }: { db: Db; session: Session }
       return Response.json({ error: "invalid_json" }, { status: 400 });
     }
     try {
-      return Response.json(await run(body));
+      return Response.json(await run(body, signedIn.user.id));
     } catch (error) {
       if (error instanceof BadRequest) return Response.json({ error: error.message }, { status: 400 });
       throw error;
@@ -37,7 +39,7 @@ export function createSyncHandlers({ db, session }: { db: Db; session: Session }
   }
 
   return {
-    push: (request: Request) => handle(request, (body) => push(db, parsePush(body))),
+    push: (request: Request) => handle(request, (body, userId) => push(db, parsePush(body), userId)),
     pull: (request: Request) => handle(request, (body) => pull(db, parsePull(body))),
   };
 }
@@ -46,9 +48,10 @@ export function createSyncHandlers({ db, session }: { db: Db; session: Session }
  * Stores pushed records. Newer `updatedAt` wins; an equal or older one changes
  * nothing, and observations are only ever inserted, so a repeated push is a
  * no-op. A product whose barcode is already stored under another id is not
- * stored: the response maps it to the stored one.
+ * stored: the response maps it to the stored one. Prices, corrections and
+ * scans are stamped with the pushing user, whatever the device claimed.
  */
-export async function push(db: Db, batch: PushRequest): Promise<PushResponse> {
+export async function push(db: Db, batch: PushRequest, userId: string): Promise<PushResponse> {
   const { regions, categories, chains, stores, items, observations, priceCorrections, unknownBarcodes, itemAliases } = schema;
 
   await upsert(db, regions, batch.regions.map((r) => row(r)));
@@ -81,21 +84,34 @@ export async function push(db: Db, batch: PushRequest): Promise<PushResponse> {
       : [],
   );
   const rows = batch.observations.map((o) => {
-    const data: PriceObservation = { ...o, itemId: aliases.get(o.itemId) ?? o.itemId };
+    const data: PriceObservation = { ...o, itemId: aliases.get(o.itemId) ?? o.itemId, recordedBy: userId };
     return { id: o.id, updatedAt: o.observedAt, data, regionId: o.regionId, itemId: data.itemId };
   });
   if (rows.length) await db.insert(observations).values(rows).onConflictDoNothing();
 
-  const corrections = batch.priceCorrections.map((c) => ({ id: c.id, updatedAt: c.correctedAt, data: c, regionId: c.regionId }));
+  const corrections = batch.priceCorrections.map((c) => ({
+    id: c.id,
+    updatedAt: c.correctedAt,
+    data: { ...c, recordedBy: userId },
+    regionId: c.regionId,
+  }));
   if (corrections.length) await db.insert(priceCorrections).values(corrections).onConflictDoNothing();
 
-  const scans = batch.unknownBarcodes.map((s) => ({ id: s.id, updatedAt: s.scannedAt, data: s, regionId: s.regionId }));
+  const scans = batch.unknownBarcodes.map((s) => ({
+    id: s.id,
+    updatedAt: s.scannedAt,
+    data: { ...s, recordedBy: userId },
+    regionId: s.regionId,
+  }));
   if (scans.length) await db.insert(unknownBarcodes).values(scans).onConflictDoNothing();
 
   return { mappings, items: kept };
 }
 
-/** Records changed after the cursor: global ones everywhere, regional ones only in the given regions. */
+/**
+ * Records changed after the cursor: global ones everywhere, regional ones only
+ * in the given regions. Also every user's name, for "dicatat oleh …".
+ */
 export async function pull(db: Db, { regionIds, cursor }: PullRequest): Promise<PullResponse> {
   const { regions, categories, chains, stores, items, observations, priceCorrections, unknownBarcodes } = schema;
   const regional = regionIds.length > 0;
@@ -140,6 +156,7 @@ export async function pull(db: Db, { regionIds, cursor }: PullRequest): Promise<
     priceCorrections: data(pc),
     unknownBarcodes: data(ub),
     cursor: Math.max(cursor, ...all.map((row) => row.seq)),
+    users: await db.select({ id: schema.user.id, name: schema.user.name }).from(schema.user),
   };
 }
 

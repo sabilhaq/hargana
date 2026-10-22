@@ -1,5 +1,6 @@
 import type { Clock } from "./clock";
 import { CoreError } from "./errors";
+import { recorderId, recorders } from "./people";
 import { currentVisit } from "./places";
 import type { HarganaStorage } from "./storage";
 import type {
@@ -195,6 +196,7 @@ export function prices(
         source: "collector",
         verified: true,
         observedAt: clock.now().toISOString(),
+        recordedBy: await recorderId(storage),
       };
       await storage.saveSynced("observations", observation);
       return observation;
@@ -222,6 +224,7 @@ export function prices(
         source: "collector",
         verified: true,
         observedAt: clock.now().toISOString(),
+        recordedBy: await recorderId(storage),
       };
       await storage.saveSynced("observations", observation);
       return observation;
@@ -243,6 +246,7 @@ export function prices(
         itemId: observation.itemId,
         regionId: observation.regionId,
         correctedAt: clock.now().toISOString(),
+        recordedBy: await recorderId(storage),
       });
     },
 
@@ -264,6 +268,7 @@ export function prices(
       ]);
       const storeById = new Map(stores.map((s) => [s.id, s]));
       const chainById = new Map(chains.map((c) => [c.id, c]));
+      const who = await recorders(storage);
 
       const all: PriceHistoryEntry[] = [];
       for (const observation of observations) {
@@ -276,6 +281,7 @@ export function prices(
           chain,
           line: chain ? `chain:${chain.id}` : `store:${store.id}`,
           paid: effective(observation, localDay(new Date(observation.observedAt))).price,
+          recordedBy: who(observation.recordedBy),
         });
       }
       all.sort((a, b) => b.observation.observedAt.localeCompare(a.observation.observedAt));
@@ -393,6 +399,7 @@ export function prices(
       ]);
       const chainById = new Map(chains.map((c) => [c.id, c]));
       const { resolved, chainLatest } = resolveStores(observations, stores);
+      const who = await recorders(storage);
       const now = clock.now().getTime();
       const today = localDay(clock.now());
 
@@ -411,6 +418,7 @@ export function prices(
         ...age(observation, store.type),
         fromChain: observation.scope === "chain",
         observation,
+        recordedBy: who(observation.recordedBy),
       });
       const byPrice = (a: { price: number }, b: { price: number }) => a.price - b.price;
 
@@ -491,6 +499,7 @@ export function prices(
           observedAt: observation.observedAt,
           ...age(observation, "branch"),
           observation,
+          recordedBy: who(observation.recordedBy),
           branches,
           varies: branches.some((b) => !samePrice(b, branches[0])),
         };

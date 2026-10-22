@@ -1,6 +1,12 @@
 // Domain records as the core hands them to the UI. Ids are client-generated
 // UUIDs; `updatedAt` is an ISO timestamp used by sync.
 
+/** A person using Hargana (an account on the server). */
+export type User = { id: string; name: string };
+
+/** Who recorded something, for display: `name` is null when unknown on this device. */
+export type Recorder = { id: string; name: string | null; isMe: boolean };
+
 export type Region = {
   id: string;
   name: string;
@@ -130,6 +136,8 @@ export type UnknownBarcodeScan = {
   barcode: string;
   regionId: string;
   scannedAt: string;
+  /** The user who recorded it, as set by the server on push; absent on records from before this was kept. */
+  recordedBy?: string | null;
 };
 
 /** A barcode still missing from the catalog, with how often it was looked up. */
@@ -196,6 +204,8 @@ export type PriceObservation = {
   source: "collector" | "shopper";
   verified: boolean;
   observedAt: string;
+  /** The user who recorded it, as set by the server on push; absent on records from before this was kept. */
+  recordedBy?: string | null;
 };
 
 /**
@@ -209,6 +219,8 @@ export type PriceCorrection = {
   itemId: string;
   regionId: string;
   correctedAt: string;
+  /** The user who recorded it, as set by the server on push; absent on records from before this was kept. */
+  recordedBy?: string | null;
 };
 
 /** A price as typed at the store: `amount` (minor units) for `qty` `unit`. */
@@ -249,6 +261,7 @@ export type StorePrice = {
   /** The branch has no newer price of its own, so the chain price applies. */
   fromChain: boolean;
   observation: PriceObservation;
+  recordedBy: Recorder | null;
 };
 
 /** A chain's price, with what each of its branches resolves to. */
@@ -302,6 +315,7 @@ export type PriceHistoryEntry = {
   line: string;
   /** What it cost that day: the promo price if a promo ran, else the price (low end of a range). */
   paid: number;
+  recordedBy: Recorder | null;
 };
 
 /** A store's (or, for chain-wide prices, a chain's) price over time, oldest first. */

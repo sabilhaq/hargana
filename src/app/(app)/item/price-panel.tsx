@@ -17,6 +17,7 @@ import { parseAmount } from "@/lib/money";
 import { useCore } from "../core-provider";
 import { Button, Empty, Field, FormError, inputClass, List, Section, Sheet, useCoreData, useSave } from "../ui";
 import { useMoney } from "./money";
+import { useRecorderName } from "./recorder";
 import { PriceHistorySection } from "./price-history";
 
 /** Every store's price for the item, and recording at the current store. */
@@ -314,6 +315,7 @@ function PriceDetails({
   const format = useFormatter();
   const { saving, error, run } = useSave();
   const [confirming, setConfirming] = useState(false);
+  const recorderName = useRecorderName();
   const o = price?.observation;
 
   function close() {
@@ -359,6 +361,12 @@ function PriceDetails({
               <>
                 <dt className="opacity-60">{t("appliesTo")}</dt>
                 <dd>{t("wholeChain", { chain: price.chain.name })}</dd>
+              </>
+            )}
+            {price.recordedBy && (
+              <>
+                <dt className="opacity-60">{t("recordedBy")}</dt>
+                <dd>{recorderName(price.recordedBy)}</dd>
               </>
             )}
             {o.note && (

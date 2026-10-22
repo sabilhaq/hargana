@@ -7,6 +7,9 @@ import * as schema from "./db/schema";
 import { createPhotoHandlers, memoryPhotoStore } from "./photos";
 import { createSyncHandlers } from "./sync";
 
+/** Accounts on the test server. */
+export const TEST_USERS = { owner: { id: "user-owner", name: "Sabil" }, budi: { id: "user-budi", name: "Budi" } };
+
 // Starting PGlite and migrating takes seconds, so each test file shares one.
 let shared: Promise<ReturnType<typeof drizzle<typeof schema>>> | undefined;
 
@@ -14,6 +17,7 @@ async function database() {
   shared ??= (async () => {
     const db = drizzle(new PGlite(), { schema });
     await migrate(db, { migrationsFolder: "./drizzle" });
+    await db.insert(schema.user).values(Object.values(TEST_USERS).map((u) => ({ ...u, email: `${u.id}@hargana.test` })));
     return db;
   })();
   const db = await shared;
@@ -24,11 +28,12 @@ async function database() {
 /**
  * The sync API over an empty in-memory Postgres with the real migrations.
  * `call` goes through the HTTP handlers; `transport` lets a core sync with it.
+ * Requests are signed in as the owner until `signInAs` switches user.
  */
 export async function testServer() {
   const db = await database();
-  let signedIn = true;
-  const session = async () => (signedIn ? { user: { id: "owner" } } : null);
+  let signedIn: string | null = TEST_USERS.owner.id;
+  const session = async () => (signedIn ? { user: { id: signedIn } } : null);
   const handlers = createSyncHandlers({ db, session });
   const photoStore = memoryPhotoStore();
   const photos = createPhotoHandlers({ store: photoStore, session });
@@ -63,5 +68,13 @@ export async function testServer() {
     },
   };
 
-  return { call, upload, serve, photoStore, transport, signOut: () => (signedIn = false) };
+  return {
+    call,
+    upload,
+    serve,
+    photoStore,
+    transport,
+    signInAs: (user: { id: string }) => (signedIn = user.id),
+    signOut: () => (signedIn = null),
+  };
 }

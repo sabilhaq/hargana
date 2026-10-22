@@ -1,4 +1,5 @@
 import type { Clock } from "./clock";
+import { recorders } from "./people";
 import { priceUnit, withoutCorrected } from "./prices";
 import type { HarganaStorage } from "./storage";
 import type { Category, Chain, Item, PriceCorrection, PriceObservation, Region, Store, UnknownBarcodeScan } from "./types";
@@ -16,7 +17,7 @@ export type ExportData = {
    * Each with its region's currency code, so prices read on their own, and
    * whether it was removed (corrected, or a confirmation of a corrected price).
    */
-  observations: (PriceObservation & { currency: string; removed: boolean })[];
+  observations: (PriceObservation & { currency: string; removed: boolean; recordedByName: string | null })[];
   priceCorrections: PriceCorrection[];
   unknownBarcodes: UnknownBarcodeScan[];
 };
@@ -35,6 +36,7 @@ export function exporter(storage: HarganaStorage, clock: Clock) {
     ]);
     const currency = new Map(regions.map((r) => [r.id, r.currency]));
     const { removed } = withoutCorrected(observations, priceCorrections);
+    const who = await recorders(storage);
     return {
       app: "hargana",
       exportedAt: clock.now().toISOString(),
@@ -43,7 +45,12 @@ export function exporter(storage: HarganaStorage, clock: Clock) {
       stores,
       categories,
       items,
-      observations: observations.map((o) => ({ ...o, currency: currency.get(o.regionId) ?? "", removed: removed.has(o.id) })),
+      observations: observations.map((o) => ({
+        ...o,
+        currency: currency.get(o.regionId) ?? "",
+        removed: removed.has(o.id),
+        recordedByName: who(o.recordedBy)?.name ?? null,
+      })),
       priceCorrections,
       unknownBarcodes,
     };
@@ -125,6 +132,7 @@ export function exporter(storage: HarganaStorage, clock: Clock) {
             "source",
             "verified",
             "removed",
+            "recorded_by",
           ],
           data.observations.map((o) => {
             const item = items.get(o.itemId);
@@ -153,6 +161,7 @@ export function exporter(storage: HarganaStorage, clock: Clock) {
               o.source,
               o.verified,
               o.removed,
+              o.recordedByName,
             ];
           }),
         ),

@@ -5,6 +5,7 @@ import { useMemo, useState, type PointerEvent } from "react";
 import type { HistoryLine, PriceHistory } from "@/core";
 import { Empty, inputClass, List, Section, useCoreData } from "../ui";
 import { useMoney } from "./money";
+import { useRecorderName } from "./recorder";
 
 /** Lines get the first eight chart colors in order; any more share a neutral gray. */
 const lineColor = (line: HistoryLine) => (line.order < 8 ? `var(--series-${line.order + 1})` : "var(--series-other)");
@@ -198,12 +199,13 @@ function HistoryList({ history }: { history: PriceHistory }) {
   const money = useMoney(history.region);
   const format = useFormatter();
   const [all, setAll] = useState(false);
+  const recorderName = useRecorderName();
   const shown = all ? history.entries : history.entries.slice(0, FIRST_ENTRIES);
 
   return (
     <>
       <List>
-        {shown.map(({ observation: o, store, chain, paid }) => (
+        {shown.map(({ observation: o, store, chain, paid, recordedBy }) => (
           <li key={o.id} className="flex items-start justify-between gap-3 px-4 py-3">
             <div className="flex min-w-0 flex-col">
               <span className="truncate font-medium">{chain ? t("PriceDetails.wholeChain", { chain: chain.name }) : store.name}</span>
@@ -211,6 +213,7 @@ function HistoryList({ history }: { history: PriceHistory }) {
                 {format.dateTime(new Date(o.observedAt), { day: "numeric", month: "short", year: "numeric" })} ·{" "}
                 {t(`PriceDetails.action_${o.action}`)}
                 {chain && ` · ${store.name}`}
+                {recordedBy && ` · ${recorderName(recordedBy)}`}
               </span>
               {o.note && <span className="text-sm italic opacity-70">{o.note}</span>}
             </div>

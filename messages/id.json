@@ -268,7 +268,8 @@
     "removeHint": "Harga ini dianggap salah catat dan tidak dipakai lagi. Toko ini kembali ke harga sebelumnya, dan konfirmasi “Sama ✓” untuk harga ini ikut dihapus.",
     "removeChainHint": "Harga ini berlaku untuk semua cabang {chain}. Setelah dihapus, setiap cabang kembali ke harga sebelumnya, dan konfirmasi “Sama ✓” untuk harga ini ikut dihapus.",
     "keep": "Batal",
-    "removeConfirm": "Ya, hapus"
+    "removeConfirm": "Ya, hapus",
+    "recordedBy": "Dicatat oleh"
   },
   "History": {
     "title": "Riwayat harga",
@@ -286,5 +287,9 @@
     "change": "Ubah",
     "dismiss": "Sembunyikan {item} untuk kunjungan ini",
     "more": "{count, plural, other {dan # barang lain}}"
+  },
+  "Recorder": {
+    "me": "kamu",
+    "unknown": "pengguna lain"
   }
 }
