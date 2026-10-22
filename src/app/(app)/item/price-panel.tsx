@@ -13,9 +13,11 @@ import {
   type Store,
   type StorePrice,
 } from "@/core";
-import { formatMoney, parseAmount } from "@/lib/money";
+import { parseAmount } from "@/lib/money";
 import { useCore } from "../core-provider";
 import { Button, Empty, Field, FormError, inputClass, List, Section, Sheet, useCoreData, useSave } from "../ui";
+import { useMoney } from "./money";
+import { PriceHistorySection } from "./price-history";
 
 /** Every store's price for the item, and recording at the current store. */
 export function PricePanel({ item }: { item: Item }) {
@@ -39,16 +41,9 @@ export function PricePanel({ item }: { item: Item }) {
       <Section title={t("title", { region: prices.region.name })}>
         {prices.rows.length === 0 ? <Empty>{t("none")}</Empty> : <PriceList prices={prices} here={store?.id} onRemoved={reload} />}
       </Section>
+      <PriceHistorySection itemId={item.id} version={prices} />
     </>
   );
-}
-
-function useMoney(region: Region) {
-  return (minor: number, max?: number | null) => {
-    const low = formatMoney(minor, region.currency, region.locale);
-    // "Rp 28.000–40.000": the symbol once.
-    return max ? `${low}–${formatMoney(max, region.currency, region.locale).replace(/^[^\d]+/, "")}` : low;
-  };
 }
 
 /** Whether to buy here: the cheapest price elsewhere and the recent low. */

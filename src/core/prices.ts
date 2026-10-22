@@ -10,6 +10,8 @@ import type {
   ItemPrices,
   PriceCorrection,
   PriceEntry,
+  PriceHistory,
+  PriceHistoryEntry,
   PriceObservation,
   PriceRow,
   Store,
@@ -236,6 +238,68 @@ export function prices(
         regionId: observation.regionId,
         correctedAt: clock.now().toISOString(),
       });
+    },
+
+    /**
+     * The item's recorded prices in the active region, for the history view:
+     * the list newest first and one chart line per store (a chain-wide price
+     * is drawn on its chain's line). With `storeId`, only what applies to that
+     * store: its own prices and its chain's chain-wide ones.
+     */
+    async priceHistory(itemId: string, { storeId }: { storeId?: string } = {}): Promise<PriceHistory> {
+      const item = await mustItem(itemId);
+      const { activeRegion } = await context();
+      const regionId = activeRegion.id;
+      const [region, observations, stores, chains] = await Promise.all([
+        storage.regions.get(regionId),
+        observationsAt(itemId, regionId),
+        storage.stores.where({ regionId }).toArray(),
+        storage.chains.where({ regionId }).toArray(),
+      ]);
+      const storeById = new Map(stores.map((s) => [s.id, s]));
+      const chainById = new Map(chains.map((c) => [c.id, c]));
+
+      const all: PriceHistoryEntry[] = [];
+      for (const observation of observations) {
+        const store = storeById.get(observation.storeId);
+        if (!store) continue;
+        const chain = observation.scope === "chain" && observation.chainId ? (chainById.get(observation.chainId) ?? null) : null;
+        all.push({
+          observation,
+          store,
+          chain,
+          line: chain ? `chain:${chain.id}` : `store:${store.id}`,
+          paid: effective(observation, localDay(new Date(observation.observedAt))).price,
+        });
+      }
+      all.sort((a, b) => b.observation.observedAt.localeCompare(a.observation.observedAt));
+
+      const lineName = (e: PriceHistoryEntry) => e.chain?.name ?? e.store.name;
+      const names = [...new Map(all.map((e) => [e.line, lineName(e)]))].sort((a, b) => a[1].localeCompare(b[1]));
+      const order = new Map(names.map(([key], i) => [key, i]));
+
+      const only = storeId ? storeById.get(storeId) : undefined;
+      const entries = only ? all.filter((e) => e.store.id === only.id || (e.chain && e.chain.id === only.chainId)) : all;
+
+      const lines = new Map<string, PriceHistory["lines"][number]>();
+      for (const e of [...entries].reverse()) {
+        const line = lines.get(e.line) ?? { key: e.line, name: lineName(e), order: order.get(e.line)!, points: [] };
+        line.points.push({ observedAt: e.observation.observedAt, paid: e.paid, observationId: e.observation.id });
+        lines.set(e.line, line);
+      }
+
+      const since = new Date(clock.now().getTime() - LOWEST_WINDOW_DAYS * DAY_MS).toISOString();
+      const recent = entries.filter((e) => e.observation.observedAt >= since).map((e) => e.paid);
+
+      return {
+        region: region!,
+        unit: priceUnit(item),
+        entries,
+        lines: [...lines.values()].sort((a, b) => a.order - b.order),
+        lowest90Days: recent.length ? Math.min(...recent) : null,
+        stores: [...new Map(all.map((e) => [e.store.id, e.store])).values()].sort((a, b) => a.name.localeCompare(b.name)),
+        asOf: clock.now().toISOString(),
+      };
     },
 
     /** Every observation of an item, newest first, removed ones included. */

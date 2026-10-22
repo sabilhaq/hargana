@@ -280,6 +280,41 @@ export type ItemPrices = {
   lowest90Days: { price: number; observedAt: string; store: Store } | null;
 };
 
+/** One recorded price in an item's history. */
+export type PriceHistoryEntry = {
+  observation: PriceObservation;
+  store: Store;
+  /** Set for a chain-wide price. */
+  chain: Chain | null;
+  /** The chart line it belongs to (`HistoryLine.key`). */
+  line: string;
+  /** What it cost that day: the promo price if a promo ran, else the price (low end of a range). */
+  paid: number;
+};
+
+/** A store's (or, for chain-wide prices, a chain's) price over time, oldest first. */
+export type HistoryLine = {
+  key: string;
+  name: string;
+  /** Stable position among all of the item's lines, so a line keeps its color when filtered. */
+  order: number;
+  points: { observedAt: string; paid: number; observationId: string }[];
+};
+
+export type PriceHistory = {
+  region: Region;
+  unit: EntryUnit;
+  /** Newest first; removed prices are left out. */
+  entries: PriceHistoryEntry[];
+  lines: HistoryLine[];
+  /** The lowest price paid in the last 90 days among these entries. */
+  lowest90Days: number | null;
+  /** Stores with a recorded price, by name, to filter by. */
+  stores: Store[];
+  /** When this was worked out: the chart runs each line on to here. */
+  asOf: string;
+};
+
 export type Elsewhere = {
   /** The store, or the chain when its chain price applies at several branches. */
   name: string;

@@ -23,3 +23,42 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+
+/*
+ * Chart colors: one fixed hue per line, in this order (never cycled). Checked
+ * with the dataviz palette validator against white and #0a0a0a: lightness,
+ * chroma, colorblind and normal-vision separation pass in both modes; in light
+ * mode aqua, yellow and magenta are under 3:1 on white, so charts always carry
+ * a legend, tooltips and the history list as text.
+ */
+.viz-root {
+  --viz-grid: #e5e5e5;
+  --viz-text: #525252;
+  --viz-surface: #ffffff;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #6250d6;
+  --series-8: #e34948;
+  --series-other: #8a8a8a;
+}
+
+@media (prefers-color-scheme: dark) {
+  .viz-root {
+    --viz-grid: #262626;
+    --viz-text: #a3a3a3;
+    --viz-surface: #0a0a0a;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+    --series-other: #737373;
+  }
+}
