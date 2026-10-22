@@ -20,7 +20,7 @@ import { useMoney } from "./money";
 import { PriceHistorySection } from "./price-history";
 
 /** Every store's price for the item, and recording at the current store. */
-export function PricePanel({ item }: { item: Item }) {
+export function PricePanel({ item, startChanging = false }: { item: Item; startChanging?: boolean }) {
   const t = useTranslations("Prices");
   const [data, reload] = useCoreData(
     async (core) => ({ prices: await core.itemPrices(item.id), context: await core.context() }),
@@ -34,7 +34,7 @@ export function PricePanel({ item }: { item: Item }) {
     <>
       <Summary prices={prices} />
       {store ? (
-        <RecordHere key={store.id} item={item} store={store} prices={prices} onSaved={reload} />
+        <RecordHere key={store.id} item={item} store={store} prices={prices} onSaved={reload} startChanging={startChanging} />
       ) : (
         <p className="rounded-xl bg-neutral-100 px-4 py-3 text-sm dark:bg-neutral-800">{t("viewOnly")}</p>
       )}
@@ -130,11 +130,23 @@ function PriceText({
  * With a known price here: "Sama ✓" (one tap) or "Ubah harga". Without one:
  * the record form straight away.
  */
-function RecordHere({ item, store, prices, onSaved }: { item: Item; store: Store; prices: ItemPrices; onSaved: () => void }) {
+function RecordHere({
+  item,
+  store,
+  prices,
+  onSaved,
+  startChanging,
+}: {
+  item: Item;
+  store: Store;
+  prices: ItemPrices;
+  onSaved: () => void;
+  startChanging: boolean;
+}) {
   const t = useTranslations();
   const core = useCore();
   const { saving, error, run } = useSave();
-  const [changing, setChanging] = useState(false);
+  const [changing, setChanging] = useState(startChanging);
   const [confirmed, setConfirmed] = useState(false);
   const here = prices.here;
 

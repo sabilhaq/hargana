@@ -280,6 +280,18 @@ export type ItemPrices = {
   lowest90Days: { price: number; observedAt: string; store: Store } | null;
 };
 
+/** An item whose price at the current store is older than the region's threshold. */
+export type StalePrice = {
+  item: Item;
+  price: number;
+  priceMax: number | null;
+  regularPrice: number;
+  promoUntil: string | null;
+  ageDays: number;
+  /** The price is the store's chain price. */
+  fromChain: boolean;
+};
+
 /** One recorded price in an item's history. */
 export type PriceHistoryEntry = {
   observation: PriceObservation;

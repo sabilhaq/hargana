@@ -11,6 +11,7 @@ import { useCore } from "./core-provider";
 import { useDescribeItem } from "./items/describe";
 import { Scanner } from "./scanner";
 import { StorePicker } from "./store-picker";
+import { StaleHere } from "./stale-here";
 import { SyncIndicator, useSync } from "./sync";
 import { Empty, inputClass, List, Row, useCoreData } from "./ui";
 
@@ -65,6 +66,8 @@ export function HomeScreen() {
           reloadContext();
         }}
       />
+
+      {context?.currentStore && <StaleHere storeId={context.currentStore.id} />}
 
       <ScanPanel />
 
