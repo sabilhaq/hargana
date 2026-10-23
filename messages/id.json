@@ -339,5 +339,20 @@
     "error_PASSWORD_TOO_LONG": "Kata sandi terlalu panjang.",
     "error_INVALID_EMAIL": "Alamat email tidak valid.",
     "error_unknown": "Gagal mendaftar. Periksa koneksi lalu coba lagi."
+  },
+  "Password": {
+    "open": "Ubah kata sandi",
+    "title": "Ubah kata sandi",
+    "current": "Kata sandi sekarang",
+    "new": "Kata sandi baru",
+    "repeat": "Ulangi kata sandi baru",
+    "hint": "Minimal 8 karakter. Setelah diubah, perangkat lain yang masuk dengan akun ini akan dikeluarkan.",
+    "done": "Kata sandi diubah. Perangkat lain sudah dikeluarkan; perangkat ini tetap masuk.",
+    "error_mismatch": "Kata sandi baru dan ulangannya tidak sama.",
+    "error_offline": "Butuh koneksi internet untuk mengubah kata sandi.",
+    "error_INVALID_PASSWORD": "Kata sandi sekarang salah.",
+    "error_PASSWORD_TOO_SHORT": "Kata sandi baru terlalu pendek, minimal 8 karakter.",
+    "error_PASSWORD_TOO_LONG": "Kata sandi baru terlalu panjang.",
+    "error_unknown": "Gagal mengubah kata sandi. Coba lagi."
   }
 }
