@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { usePermissions } from "../permissions";
+import { ChangePassword } from "./change-password";
 import { useCore } from "../core-provider";
 import { Button, inputClass, List, Row, Screen, Section, useCoreData } from "../ui";
 
@@ -57,6 +58,7 @@ export default function SettingsPage() {
 
       <Section title={t("Settings.account")}>
         {session && <p className="text-sm opacity-70">{t("Home.signedInAs", { email: session.user.email })}</p>}
+        <ChangePassword />
         <Button variant="secondary" onClick={signOut}>
           {t("Home.signOut")}
         </Button>
