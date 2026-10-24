@@ -2,6 +2,7 @@ import type { Clock } from "./clock";
 import { CoreError } from "./errors";
 import { activeRegion } from "./places";
 import { effective, localDay, priceUnit, resolveStores, withoutCorrected } from "./prices";
+import { live } from "./removed";
 import type { HarganaStorage } from "./storage";
 import type { Category, EntryUnit, Item, PriceObservation, Region, Store } from "./types";
 
@@ -42,9 +43,9 @@ export function browser(storage: HarganaStorage, clock: Clock) {
       const regionId = await activeRegion(storage);
       const [region, stores, categories, items, observations, corrections] = await Promise.all([
         storage.regions.get(regionId),
-        storage.stores.where({ regionId }).toArray(),
+        storage.stores.where({ regionId }).filter(live).toArray(),
         storage.categories.orderBy("sortOrder").toArray(),
-        storage.items.toArray(),
+        storage.items.filter(live).toArray(),
         storage.observations.filter((o) => o.regionId === regionId).toArray(),
         storage.priceCorrections.toArray(),
       ]);

@@ -4,6 +4,7 @@ import type { Clock } from "./clock";
 import { CoreError } from "./errors";
 import { recorderId } from "./people";
 import { activeRegion } from "./places";
+import { live } from "./removed";
 import type { HarganaStorage } from "./storage";
 import {
   PRICING_UNITS,
@@ -145,7 +146,7 @@ export function catalog(storage: HarganaStorage, clock: Clock, metadata?: Produc
 
     /** Items in a category (or all items), by name. */
     async listItems({ categoryId }: { categoryId?: string } = {}) {
-      const items = await (categoryId ? storage.items.where({ categoryId }) : storage.items.toCollection()).toArray();
+      const items = await (categoryId ? storage.items.where({ categoryId }) : storage.items.toCollection()).filter(live).toArray();
       return withCategories(items.sort((a, b) => a.name.localeCompare(b.name)));
     },
 
@@ -156,7 +157,7 @@ export function catalog(storage: HarganaStorage, clock: Clock, metadata?: Produc
     async searchItems(query: string, { limit = 30 } = {}) {
       const text = query.trim();
       if (!text) return [];
-      const fuse = new Fuse(await storage.items.toArray(), {
+      const fuse = new Fuse(await storage.items.filter(live).toArray(), {
         keys: [
           { name: "name", weight: 2 },
           { name: "brand", weight: 1.5 },

@@ -1,6 +1,7 @@
 import type { Clock } from "./clock";
 import { CoreError } from "./errors";
 import { recorderId } from "./people";
+import { live } from "./removed";
 import { GARUT_REGION_ID } from "./seed";
 import type { HarganaStorage } from "./storage";
 import type { Category, Chain, CoreContext, Input, LatLng, Region, Store, StoreMatch } from "./types";
@@ -53,7 +54,7 @@ export function places(storage: HarganaStorage, clock: Clock) {
     },
 
     listChains: (regionId?: string) =>
-      (regionId ? storage.chains.where({ regionId }) : storage.chains.toCollection()).toArray().then(byName),
+      (regionId ? storage.chains.where({ regionId }) : storage.chains.toCollection()).filter(live).toArray().then(byName),
     async saveChain(input: Input<Chain>) {
       required(input.name, "name");
       must(await storage.regions.get(input.regionId), "Region", input.regionId);
@@ -61,7 +62,7 @@ export function places(storage: HarganaStorage, clock: Clock) {
     },
 
     listStores: (regionId?: string) =>
-      (regionId ? storage.stores.where({ regionId }) : storage.stores.toCollection()).toArray().then(byName),
+      (regionId ? storage.stores.where({ regionId }) : storage.stores.toCollection()).filter(live).toArray().then(byName),
     getStore: async (id: string) => must(await storage.stores.get(id), "Store", id),
     async saveStore(input: Input<Store>) {
       required(input.name, "name");
@@ -83,7 +84,7 @@ export function places(storage: HarganaStorage, clock: Clock) {
      */
     async searchStores(query = "", near?: LatLng): Promise<StoreMatch[]> {
       const [stores, chains, regions] = await Promise.all([
-        storage.stores.toArray(),
+        storage.stores.filter(live).toArray(),
         storage.chains.toArray(),
         storage.regions.toArray(),
       ]);
@@ -132,7 +133,8 @@ export function places(storage: HarganaStorage, clock: Clock) {
       const current = await setting<CurrentStoreSetting>(CURRENT_STORE);
       if (current) {
         const idle = clock.now().getTime() - new Date(current.lastActiveAt).getTime();
-        if (idle <= CURRENT_STORE_TTL_MS) currentStore = (await storage.stores.get(current.storeId)) ?? null;
+        const store = await storage.stores.get(current.storeId);
+        if (idle <= CURRENT_STORE_TTL_MS && store && live(store)) currentStore = store;
         if (currentStore) {
           await storage.settings.put({ key: CURRENT_STORE, value: { ...current, lastActiveAt: now() } });
         } else {
