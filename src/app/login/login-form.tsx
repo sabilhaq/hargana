@@ -9,7 +9,7 @@ export function LoginForm() {
   const t = useTranslations();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<"failed" | "error" | null>(null);
+  const [error, setError] = useState<"failed" | "deactivated" | "error" | null>(null);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -22,7 +22,7 @@ export function LoginForm() {
       rememberMe: true,
     });
     if (result.error) {
-      setError(result.error.status === 401 ? "failed" : "error");
+      setError(result.error.code === "ACCOUNT_DEACTIVATED" ? "deactivated" : result.error.status === 401 ? "failed" : "error");
       setSubmitting(false);
       return;
     }
@@ -57,7 +57,7 @@ export function LoginForm() {
       </label>
       {error && (
         <p role="alert" className="text-sm text-red-600">
-          {error === "failed" ? t("Login.failed") : t("Login.error")}
+          {t(`Login.${error}`)}
         </p>
       )}
       <button

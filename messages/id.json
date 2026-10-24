@@ -10,7 +10,8 @@
     "submit": "Masuk",
     "submitting": "Memproses…",
     "failed": "Email atau kata sandi salah.",
-    "error": "Gagal masuk. Coba lagi."
+    "error": "Gagal masuk. Coba lagi.",
+    "deactivated": "Akun ini sudah dinonaktifkan oleh pemilik."
   },
   "Home": {
     "signedInAs": "Masuk sebagai {email}",
@@ -79,6 +80,7 @@
     "unknownBarcodesHint": "Barcode yang dipindai tapi belum ada",
     "exportHint": "Unduh semua barang, toko, dan harga",
     "invitesHint": "Ajak teman ikut mencatat harga",
+    "membersHint": "Lihat siapa saja yang ikut, atau keluarkan teman",
     "removedHint": "Barang dan toko yang sudah dihapus"
   },
   "Regions": {
@@ -302,6 +304,19 @@
   "Permissions": {
     "itemOwnerOnly": "Barang ini ditambahkan orang lain, jadi hanya pemilik Hargana yang bisa mengubahnya.",
     "settingsOwnerOnly": "Hanya pemilik Hargana yang bisa menambah atau mengubah ini."
+  },
+  "Members": {
+    "title": "Anggota",
+    "intro": "Semua orang yang punya akun Hargana. Teman yang dikeluarkan langsung keluar dari semua perangkatnya dan tidak bisa masuk lagi. Harga yang sudah mereka catat tetap tersimpan.",
+    "ownerOnly": "Hanya pemilik yang bisa mengatur anggota.",
+    "needsConnection": "Butuh koneksi internet. Coba lagi nanti.",
+    "owner": "Pemilik",
+    "contributor": "Teman",
+    "deactivated": "Dikeluarkan",
+    "joined": "Bergabung {date}",
+    "deactivate": "Keluarkan",
+    "reactivate": "Aktifkan lagi",
+    "confirmDeactivate": "Keluarkan {name}? Mereka akan keluar dari semua perangkat dan tidak bisa masuk lagi sampai kamu aktifkan lagi."
   },
   "Invites": {
     "title": "Undang teman",
