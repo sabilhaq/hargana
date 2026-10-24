@@ -1,6 +1,9 @@
 // Domain records as the core hands them to the UI. Ids are client-generated
 // UUIDs; `updatedAt` is an ISO timestamp used by sync.
 
+/** Removed items, stores and chains, for Settings → Dihapus. */
+export type RemovedRecords = { items: Item[]; stores: Store[]; chains: Chain[] };
+
 /** What a person may do: the owner runs Hargana; contributors help collect prices. */
 export type Role = "owner" | "contributor";
 
@@ -29,6 +32,8 @@ export type Chain = {
   name: string;
   /** Who added it; set by the server. Absent on data from before this was kept, which only the owner may change. */
   createdBy?: string | null;
+  /** Set when the owner removed it: kept, but hidden and no longer counted anywhere. */
+  removedAt?: string | null;
   updatedAt: string;
 };
 
@@ -46,6 +51,8 @@ export type Store = {
   lng?: number;
   /** Who added it; set by the server. Absent on data from before this was kept, which only the owner may change. */
   createdBy?: string | null;
+  /** Set when the owner removed it: kept, but hidden and no longer counted anywhere. */
+  removedAt?: string | null;
   updatedAt: string;
 };
 
@@ -112,6 +119,8 @@ export type Commodity = {
   createdAt: string;
   /** Who added it; set by the server. Absent on data from before this was kept, which only the owner may change. */
   createdBy?: string | null;
+  /** Set when the owner removed it: kept, but hidden and no longer counted anywhere. */
+  removedAt?: string | null;
   updatedAt: string;
 };
 
@@ -135,6 +144,8 @@ export type Product = {
   createdAt: string;
   /** Who added it; set by the server. Absent on data from before this was kept, which only the owner may change. */
   createdBy?: string | null;
+  /** Set when the owner removed it: kept, but hidden and no longer counted anywhere. */
+  removedAt?: string | null;
   updatedAt: string;
 };
 

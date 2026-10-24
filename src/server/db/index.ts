@@ -11,30 +11,41 @@ import * as schema from "./schema";
 function createDb() {
   const url = process.env.DATABASE_URL;
   if (url) return { kind: "neon" as const, db: drizzleNeon(neon(url), { schema }) };
-  return { kind: "pglite" as const, db: drizzlePglite(openPglite(), { schema }) };
+  return { kind: "pglite" as const, db: drizzlePglite({ client: lazyPglite(), schema }) };
 }
 
 /**
- * The local database. A production build only imports server code (several
- * workers at once) and never queries, so it gets a throwaway in-memory one;
- * otherwise one process at a time holds the folder, and closes it cleanly
- * when stopped.
+ * The local database, opened on the first query rather than on import: the dev
+ * server loads route code in short-lived helper processes (and a production
+ * build in several workers) that never query, and each of them opening the
+ * folder would corrupt it. Once open, one process holds it (see lock.ts) and
+ * closes it cleanly when stopped. A production build never queries, so it
+ * gets a throwaway in-memory database if anything asks.
  */
-function openPglite() {
-  if (process.env.NEXT_PHASE === "phase-production-build") return new PGlite();
-  const dir = process.env.PGLITE_DIR ?? ".data/pglite";
-  mkdirSync(dir, { recursive: true });
-  const release = lockDatabase(dir);
-  const client = new PGlite(dir);
-  const close = async () => {
-    await client.close().catch(() => {});
-    release();
-  };
-  for (const signal of ["SIGINT", "SIGTERM"] as const) {
-    process.once(signal, () => void close().finally(() => process.exit(0)));
+function lazyPglite(): PGlite {
+  let client: PGlite | undefined;
+  function open() {
+    if (process.env.NEXT_PHASE === "phase-production-build") return new PGlite();
+    const dir = process.env.PGLITE_DIR ?? ".data/pglite";
+    mkdirSync(dir, { recursive: true });
+    const release = lockDatabase(dir);
+    const opened = new PGlite(dir);
+    const close = async () => {
+      await opened.close().catch(() => {});
+      release();
+    };
+    for (const signal of ["SIGINT", "SIGTERM"] as const) {
+      process.once(signal, () => void close().finally(() => process.exit(0)));
+    }
+    process.once("exit", release);
+    return opened;
   }
-  process.once("exit", release);
-  return client;
+  const real = () => (client ??= open());
+  // Drizzle only calls these two.
+  return {
+    query: (...args: Parameters<PGlite["query"]>) => real().query(...args),
+    transaction: (...args: Parameters<PGlite["transaction"]>) => real().transaction(...args),
+  } as unknown as PGlite;
 }
 
 // Reuse one connection across dev hot reloads.

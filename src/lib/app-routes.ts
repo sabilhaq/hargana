@@ -10,6 +10,7 @@ export const APP_ROUTES = [
   "/settings/export",
   "/settings/invites",
   "/settings/members",
+  "/settings/removed",
   "/item",
   "/list",
   "/browse",

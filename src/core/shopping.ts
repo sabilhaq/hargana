@@ -2,6 +2,7 @@ import type { Clock } from "./clock";
 import { CoreError } from "./errors";
 import { activeRegion } from "./places";
 import { effective, localDay, priceUnit, resolveStores, withoutCorrected } from "./prices";
+import { live as notRemoved } from "./removed";
 import type { HarganaStorage, ListEntry } from "./storage";
 import type { Chain, EntryUnit, Item, Region, Store } from "./types";
 
@@ -101,11 +102,11 @@ export function shopping(storage: HarganaStorage, clock: Clock) {
     /** Where the unticked items cost least, in the active region, by the current-price rules. */
     async planShopping(): Promise<ShoppingPlan> {
       const regionId = await activeRegion(storage);
-      const wanted = (await entries()).filter((e) => !e.checked);
+      const wanted = (await entries()).filter((e) => !e.checked && notRemoved(e.item));
       const itemIds = wanted.map((e) => e.itemId);
       const [region, stores, chains, observations, corrections] = await Promise.all([
         storage.regions.get(regionId),
-        storage.stores.where({ regionId }).toArray(),
+        storage.stores.where({ regionId }).filter(notRemoved).toArray(),
         storage.chains.where({ regionId }).toArray(),
         itemIds.length ? storage.observations.where("itemId").anyOf(itemIds).toArray() : [],
         itemIds.length ? storage.priceCorrections.where("itemId").anyOf(itemIds).toArray() : [],

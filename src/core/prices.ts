@@ -2,6 +2,7 @@ import type { Clock } from "./clock";
 import { CoreError } from "./errors";
 import { recorderId, recorders } from "./people";
 import { currentVisit } from "./places";
+import { live } from "./removed";
 import type { HarganaStorage } from "./storage";
 import type {
   Chain,
@@ -263,7 +264,7 @@ export function prices(
       const [region, observations, stores, chains] = await Promise.all([
         storage.regions.get(regionId),
         observationsAt(itemId, regionId),
-        storage.stores.where({ regionId }).toArray(),
+        storage.stores.where({ regionId }).filter(live).toArray(),
         storage.chains.where({ regionId }).toArray(),
       ]);
       const storeById = new Map(stores.map((s) => [s.id, s]));
@@ -350,6 +351,8 @@ export function prices(
       }
       stale.sort((a, b) => a.observation.observedAt.localeCompare(b.observation.observedAt));
 
+      const liveItems = new Set((await storage.items.bulkGet(stale.map((s) => s.itemId))).filter((i) => i && live(i)).map((i) => i!.id));
+      stale.splice(0, stale.length, ...stale.filter((s) => liveItems.has(s.itemId)));
       const items = await storage.items.bulkGet(stale.slice(0, limit).map((s) => s.itemId));
       const prices = stale.slice(0, limit).flatMap(({ observation, ageDays }, i) =>
         items[i]
@@ -394,7 +397,7 @@ export function prices(
       const [region, observations, stores, chains] = await Promise.all([
         storage.regions.get(regionId),
         observationsAt(itemId, regionId),
-        storage.stores.where({ regionId }).toArray(),
+        storage.stores.where({ regionId }).filter(live).toArray(),
         storage.chains.where({ regionId }).toArray(),
       ]);
       const chainById = new Map(chains.map((c) => [c.id, c]));
