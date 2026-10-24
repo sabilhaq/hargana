@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import type { Chain, LatLng, Store, StoreType } from "@/core";
 import { useCore } from "../../core-provider";
 import { usePermissions } from "../../permissions";
+import { RemoveButton } from "../../remove-button";
 import {
   Button,
   Empty,
@@ -140,6 +141,7 @@ function ChainForm({ chain, regionId, onDone, onCancel }: { chain?: Chain; regio
       </Field>
       <FormError error={error} />
       <FormActions saving={saving} onCancel={onCancel} />
+      {chain && <RemoveButton kind="chain" id={chain.id} onRemoved={onDone} />}
     </form>
   );
 }
@@ -253,6 +255,7 @@ function StoreForm({
       </div>
       <FormError error={error} />
       <FormActions saving={saving} onCancel={onCancel} />
+      {store && <RemoveButton kind="store" id={store.id} onRemoved={onDone} />}
     </form>
   );
 }

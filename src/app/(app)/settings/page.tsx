@@ -53,6 +53,7 @@ export default function SettingsPage() {
           <Row href="/settings/unknown-barcodes" title={t("UnknownBarcodes.title")} detail={t("Settings.unknownBarcodesHint")} trailing="›" />
           <Row href="/settings/export" title={t("Export.title")} detail={t("Settings.exportHint")} trailing="›" />
           {canManageSettings && <Row href="/settings/invites" title={t("Invites.title")} detail={t("Settings.invitesHint")} trailing="›" />}
+          {canManageSettings && <Row href="/settings/removed" title={t("Remove.title")} detail={t("Settings.removedHint")} trailing="›" />}
         </List>
       </Section>
 

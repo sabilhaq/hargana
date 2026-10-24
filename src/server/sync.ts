@@ -66,7 +66,7 @@ export async function push(db: Db, batch: PushRequest, pusher: Pusher): Promise<
   const { regions, categories, chains, stores, items, observations, priceCorrections, unknownBarcodes, itemAliases } = schema;
   const userId = pusher.id;
   const outcome = refusals();
-  const allowed = <R extends { id: string; createdBy?: string | null }>(
+  const allowed = <R extends { id: string; createdBy?: string | null; removedAt?: string | null }>(
     table: MutableTable,
     name: keyof SyncRecords,
     records: R[],
@@ -217,7 +217,7 @@ function refusals() {
  * The records this user may store, with `createdBy` set by the server: the
  * pusher on a new record, kept as stored on an update.
  */
-async function vet<R extends { id: string; createdBy?: string | null }>(
+async function vet<R extends { id: string; createdBy?: string | null; removedAt?: string | null }>(
   db: Db,
   table: MutableTable,
   name: keyof SyncRecords,
@@ -234,6 +234,12 @@ async function vet<R extends { id: string; createdBy?: string | null }>(
   const owner = pusher.role === "owner";
   return records.flatMap((record) => {
     const current = stored.get(record.id);
+    // Removing or restoring is the owner's alone, even for what a contributor added.
+    const removalChanged = (record.removedAt ?? null) !== (current?.removedAt ?? null);
+    if (removalChanged && !owner) {
+      outcome.refuse(name, record.id, current);
+      return [];
+    }
     if (!current) {
       if (owner || contributorsMayAdd) return [{ ...record, createdBy: pusher.id }];
     } else if (owner || (!!current.createdBy && current.createdBy === pusher.id)) {

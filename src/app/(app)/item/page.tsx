@@ -6,7 +6,9 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useDescribeItem } from "../items/describe";
 import { ItemPhoto } from "../items/photo";
+import { useCore } from "../core-provider";
 import { usePermissions } from "../permissions";
+import { RemoveButton } from "../remove-button";
 import { Empty, Screen, useCoreData } from "../ui";
 import { AddToList } from "./add-to-list";
 import { PricePanel } from "./price-panel";
@@ -25,10 +27,11 @@ function ItemDetails() {
   const describe = useDescribeItem();
   const params = useSearchParams();
   const id = params.get("id") ?? "";
-  const [item] = useCoreData((core) => core.getItem(id).catch(() => null), [id]);
+  const [item, reloadItem] = useCoreData((core) => core.getItem(id).catch(() => null), [id]);
+  const core = useCore();
   const [categories] = useCoreData((core) => core.listCategories());
   const category = item && categories?.find((c) => c.id === item.categoryId);
-  const { canEdit } = usePermissions();
+  const { canEdit, canManageSettings } = usePermissions();
 
   if (item === null) {
     return (
@@ -42,6 +45,16 @@ function ItemDetails() {
     <Screen title={item?.name ?? ""} back="/">
       {item && (
         <>
+          {item.removedAt && (
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900 dark:bg-red-950 dark:text-red-100">
+              <span>{t("removed")}</span>
+              {canManageSettings && (
+                <button type="button" onClick={() => void core.restoreRecord("item", item.id).then(reloadItem)} className="shrink-0 font-semibold">
+                  {t("restore")}
+                </button>
+              )}
+            </div>
+          )}
           <div className="flex items-start gap-4">
             <dl className="grid flex-1 grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
               <dt className="opacity-60">{item.kind === "product" ? t("product") : t("commodity")}</dt>
@@ -77,6 +90,7 @@ function ItemDetails() {
               {t("edit")}
             </Link>
           )}
+          {!item.removedAt && <RemoveButton kind="item" id={item.id} onRemoved={reloadItem} />}
         </>
       )}
     </Screen>

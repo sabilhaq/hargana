@@ -8,7 +8,8 @@ export type CoreErrorCode =
   | "barcode_taken"
   | "no_current_store"
   | "incompatible_unit"
-  | "no_price";
+  | "no_price"
+  | "chain_has_branches";
 
 export class CoreError extends Error {
   constructor(
