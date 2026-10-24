@@ -11,6 +11,8 @@ export const user = pgTable("user", {
   image: text("image"),
   /** "owner" (the person who runs Hargana) or "contributor" (a friend helping collect prices). */
   role: text("role").notNull().default("contributor"),
+  /** Set when the owner removed this person's access: no sign-in until cleared. */
+  deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

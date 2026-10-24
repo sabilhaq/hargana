@@ -1,5 +1,7 @@
 import type { BetterAuthOptions } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError } from "better-auth/api";
+import { eq } from "drizzle-orm";
 import * as schema from "./db/schema";
 import type { Db } from "./sync";
 
@@ -26,6 +28,22 @@ export function authOptions(database: Db, { allowSignUp = false } = {}) {
       additionalFields: {
         // Set by the server only: never accepted from a sign-up form.
         role: { type: "string", required: false, defaultValue: "contributor", input: false },
+      },
+    },
+    databaseHooks: {
+      session: {
+        create: {
+          // A deactivated person cannot start a session: sign-in is refused with a clear code.
+          async before(session) {
+            const [person] = await database
+              .select({ deactivatedAt: schema.user.deactivatedAt })
+              .from(schema.user)
+              .where(eq(schema.user.id, session.userId));
+            if (person?.deactivatedAt) {
+              throw new APIError("FORBIDDEN", { code: "ACCOUNT_DEACTIVATED", message: "This account has been deactivated by the owner." });
+            }
+          },
+        },
       },
     },
     session: {

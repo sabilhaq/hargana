@@ -9,6 +9,7 @@ export const APP_ROUTES = [
   "/settings/unknown-barcodes",
   "/settings/export",
   "/settings/invites",
+  "/settings/members",
   "/item",
   "/list",
   "/browse",
