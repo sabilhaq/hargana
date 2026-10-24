@@ -8,6 +8,7 @@ import { useDescribeItem } from "../items/describe";
 import { ItemPhoto } from "../items/photo";
 import { usePermissions } from "../permissions";
 import { Empty, Screen, useCoreData } from "../ui";
+import { AddToList } from "./add-to-list";
 import { PricePanel } from "./price-panel";
 
 // The result screen for one item (`?id=`): what it is, and its price at every store.
@@ -67,6 +68,7 @@ function ItemDetails() {
             <ItemPhoto itemId={item.id} version={item.updatedAt} />
           </div>
           <PricePanel item={item} startChanging={params.get("change") === "1"} />
+          <AddToList itemId={item.id} />
           {canEdit(item) && (
             <Link
               href={`/items/edit?id=${item.id}`}

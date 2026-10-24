@@ -10,5 +10,6 @@ export const APP_ROUTES = [
   "/settings/export",
   "/settings/invites",
   "/item",
+  "/list",
   "/items/edit",
 ] as const;

@@ -69,6 +69,8 @@ export function HomeScreen() {
 
       {context?.currentStore && <StaleHere storeId={context.currentStore.id} />}
 
+      <ListShortcut />
+
       <ScanPanel />
 
       <Suspense>
@@ -236,6 +238,23 @@ function Catalog() {
         </p>
       )}
     </div>
+  );
+}
+
+/** "Daftar belanja", with how many items are still to buy. */
+function ListShortcut() {
+  const t = useTranslations("ShoppingList");
+  const { status } = useSync();
+  const [list] = useCoreData((core) => core.listShopping(), [status]);
+  const open = list?.filter((e) => !e.checked).length ?? 0;
+  return (
+    <Link
+      href="/list"
+      className="mt-4 flex items-center justify-between rounded-xl border border-neutral-200 px-4 py-3 dark:border-neutral-800"
+    >
+      <span className="font-semibold">{t("title")}</span>
+      <span className="text-sm opacity-70">{open > 0 ? t("toBuy", { count: open }) : t("open")} ›</span>
+    </Link>
   );
 }
 

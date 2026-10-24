@@ -30,13 +30,13 @@ type StaleDismissed = { visit: string; itemIds: string[] };
 const LOWEST_WINDOW_DAYS = 90;
 
 /** The calendar day on the device, YYYY-MM-DD. */
-function localDay(date: Date) {
+export function localDay(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 /** An observation's price today: its promo price while the promo runs (through its last day). */
-function effective(observation: PriceObservation, today: string) {
+export function effective(observation: PriceObservation, today: string) {
   const { promoPrice, promoUntil } = observation;
   return promoPrice != null && promoUntil && promoUntil >= today
     ? { price: promoPrice, regularPrice: observation.price, promoUntil }
@@ -54,7 +54,7 @@ export function priceUnit(item: Item): EntryUnit {
  * - branch: whichever is newer, its latest branch-scope observation or its
  *   chain's latest chain-scope observation.
  */
-function resolveStores(observations: PriceObservation[], stores: Store[]) {
+export function resolveStores(observations: PriceObservation[], stores: Store[]) {
   const market = latestBy(observations, "market", (o) => o.storeId);
   const branch = latestBy(observations, "branch", (o) => o.storeId);
   const chain = latestBy(observations, "chain", (o) => o.chainId!);

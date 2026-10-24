@@ -354,5 +354,31 @@
     "error_PASSWORD_TOO_SHORT": "Kata sandi baru terlalu pendek, minimal 8 karakter.",
     "error_PASSWORD_TOO_LONG": "Kata sandi baru terlalu panjang.",
     "error_unknown": "Gagal mengubah kata sandi. Coba lagi."
+  },
+  "ShoppingList": {
+    "title": "Daftar belanja",
+    "open": "Buka",
+    "toBuy": "{count, plural, other {# barang}}",
+    "search": "Tambah barang, mis. beras, telur",
+    "noResults": "Tidak ada yang cocok.",
+    "add": "Tambah",
+    "added": "Masuk daftar belanja ✓",
+    "view": "Lihat daftar",
+    "empty": "Daftar masih kosong. Cari barang di atas, atau ketuk “+ Daftar belanja” di halaman barang.",
+    "items": "Barang",
+    "clearTicked": "Hapus yang dicentang",
+    "tick": "Centang {item}",
+    "qty": "Jumlah {item}",
+    "remove": "Hapus {item} dari daftar",
+    "whereTitle": "Belanja di mana?",
+    "best": "Paling murah dalam satu toko",
+    "covered": "{covered} dari {count} barang ada harganya",
+    "missingThere": "Belum ada harga di sini: {items}",
+    "someStale": "Sebagian harga sudah lama, mungkin sudah berubah.",
+    "noPrices": "Belum ada harga untuk barang di daftar ini.",
+    "splitTitle": "Beli terpisah, masing-masing di toko termurah",
+    "saving": "Hemat {amount} dibanding belanja di {store} saja",
+    "splitTotal": "Total kalau dibeli terpisah: {total}",
+    "unpriced": "Belum ada harga di mana pun: {items}"
   }
 }
