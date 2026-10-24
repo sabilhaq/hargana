@@ -22,6 +22,9 @@ export type SyncedTable = (typeof SYNCED_TABLES)[number];
 export type OutboxEntry = { id: string; table: SyncedTable; recordId: string; createdAt: string };
 export type SettingRecord = { key: string; value: unknown };
 
+/** An item on the shopping list. Kept on this device only; never synced. */
+export type ListEntry = { id: string; itemId: string; qty: number; checked: boolean; createdAt: string };
+
 /**
  * A photo's bytes on this device. `image` is kept only until it is uploaded;
  * `thumb` stays for offline display. `pending` is 1 until uploaded (booleans
@@ -47,6 +50,7 @@ export class HarganaStorage extends Dexie {
   photos!: EntityTable<PhotoRecord, "id">;
   unknownBarcodes!: EntityTable<UnknownBarcodeScan, "id">;
   priceCorrections!: EntityTable<PriceCorrection, "id">;
+  shoppingList!: EntityTable<ListEntry, "id">;
 
   constructor(name = "hargana") {
     super(name);
@@ -78,6 +82,9 @@ export class HarganaStorage extends Dexie {
     });
     this.version(8).stores({
       priceCorrections: "id, observationId, itemId",
+    });
+    this.version(9).stores({
+      shoppingList: "id, itemId, createdAt",
     });
     this.on("populate", seed);
   }

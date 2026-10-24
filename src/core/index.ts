@@ -4,6 +4,7 @@ import { exporter } from "./export";
 import { systemClock, type Clock } from "./clock";
 import { people } from "./people";
 import { photos } from "./photos";
+import { shopping } from "./shopping";
 import { places } from "./places";
 import { prices } from "./prices";
 import { HarganaStorage } from "./storage";
@@ -19,6 +20,7 @@ export { PRICING_UNITS, SIZE_UNITS } from "./types";
 export type * from "./types";
 export { compatibleUnits, perUnitPrice } from "./units";
 export { emptyRecords } from "./sync";
+export type { ShoppingEntry, ShoppingPlan, StoreCost, StoreTotal } from "./shopping";
 export { canEdit, canManageSettings, canRemovePrice } from "./permissions";
 export type { ExportData } from "./export";
 export { MAX_PHOTO_BYTES, MAX_THUMB_BYTES } from "./photos";
@@ -62,6 +64,7 @@ export function createCore({ storage = new HarganaStorage(), clock = systemClock
     ...prices(storage, clock, placesApi.context),
     ...people(storage),
     ...photos(storage, clock),
+    ...shopping(storage, clock),
     ...exporter(storage, clock),
     ...sync(storage, clock),
   };
