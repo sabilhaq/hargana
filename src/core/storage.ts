@@ -86,6 +86,9 @@ export class HarganaStorage extends Dexie {
     this.version(9).stores({
       shoppingList: "id, itemId, createdAt",
     });
+    this.version(10).stores({
+      items: "id, barcode, categoryId, mergedInto",
+    });
     this.on("populate", seed);
   }
 

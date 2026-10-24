@@ -59,14 +59,14 @@ export function createSyncHandlers({ db, session }: { db: Db; session: Session }
  *
  * Roles: the owner may change anything. A contributor may add chains, stores,
  * items and prices, change only what they added, and remove only prices they
- * recorded; anything else is refused (listed in the response, with the
+ * recorded; never remove, restore or merge records. Anything else is refused (listed in the response, with the
  * server's version to restore) and the rest of the batch is still stored.
  */
 export async function push(db: Db, batch: PushRequest, pusher: Pusher): Promise<PushResponse> {
   const { regions, categories, chains, stores, items, observations, priceCorrections, unknownBarcodes, itemAliases } = schema;
   const userId = pusher.id;
   const outcome = refusals();
-  const allowed = <R extends { id: string; createdBy?: string | null; removedAt?: string | null }>(
+  const allowed = <R extends OwnedRecord>(
     table: MutableTable,
     name: keyof SyncRecords,
     records: R[],
@@ -217,7 +217,7 @@ function refusals() {
  * The records this user may store, with `createdBy` set by the server: the
  * pusher on a new record, kept as stored on an update.
  */
-async function vet<R extends { id: string; createdBy?: string | null; removedAt?: string | null }>(
+async function vet<R extends OwnedRecord>(
   db: Db,
   table: MutableTable,
   name: keyof SyncRecords,
@@ -234,9 +234,10 @@ async function vet<R extends { id: string; createdBy?: string | null; removedAt?
   const owner = pusher.role === "owner";
   return records.flatMap((record) => {
     const current = stored.get(record.id);
-    // Removing or restoring is the owner's alone, even for what a contributor added.
-    const removalChanged = (record.removedAt ?? null) !== (current?.removedAt ?? null);
-    if (removalChanged && !owner) {
+    // Removing, restoring and merging are the owner's alone, even for what a contributor added.
+    const ownersChange =
+      (record.removedAt ?? null) !== (current?.removedAt ?? null) || (record.mergedInto ?? null) !== (current?.mergedInto ?? null);
+    if (ownersChange && !owner) {
       outcome.refuse(name, record.id, current);
       return [];
     }
@@ -250,6 +251,7 @@ async function vet<R extends { id: string; createdBy?: string | null; removedAt?
   });
 }
 
+type OwnedRecord = { id: string; createdBy?: string | null; removedAt?: string | null; mergedInto?: string | null };
 type MutableTable = typeof schema.regions | typeof schema.categories | typeof schema.chains | typeof schema.stores | typeof schema.items;
 
 /** Inserts rows, or replaces stored ones that are older. Only a real change gets a new `seq`. */

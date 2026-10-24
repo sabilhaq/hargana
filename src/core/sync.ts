@@ -1,4 +1,5 @@
 import type { Clock } from "./clock";
+import { followMerges } from "./merge";
 import { saveUserNames } from "./people";
 import { activeRegion } from "./places";
 import { SYNCED_TABLES, type HarganaStorage, type OutboxEntry } from "./storage";
@@ -188,6 +189,8 @@ export function sync(storage: HarganaStorage, clock: Clock) {
       for (const id of regionIds) cursors[id] = response.cursor;
     }
     await storage.settings.put({ key: SYNC_CURSORS, value: cursors });
+    // Items merged on another device take this device's shopping list along.
+    if (pulled > 0) await followMerges(storage);
     return pulled;
   }
 

@@ -5,6 +5,7 @@ import { exporter } from "./export";
 import { systemClock, type Clock } from "./clock";
 import { people } from "./people";
 import { photos } from "./photos";
+import { merging } from "./merge";
 import { removal } from "./removed";
 import { shopping } from "./shopping";
 import { places } from "./places";
@@ -70,6 +71,7 @@ export function createCore({ storage = new HarganaStorage(), clock = systemClock
     ...shopping(storage, clock),
     ...browser(storage, clock),
     ...removal(storage, clock),
+    ...merging(storage, clock),
     ...exporter(storage, clock),
     ...sync(storage, clock),
   };
