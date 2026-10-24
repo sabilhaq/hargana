@@ -74,7 +74,22 @@ export function exporter(storage: HarganaStorage, clock: Clock) {
 
       return {
         "items.csv": csv(
-          ["id", "kind", "name", "brand", "barcode", "size_value", "size_unit", "pricing_unit", "category", "aliases", "photo_url", "created_at", "updated_at"],
+          [
+            "id",
+            "kind",
+            "name",
+            "brand",
+            "barcode",
+            "size_value",
+            "size_unit",
+            "pricing_unit",
+            "category",
+            "aliases",
+            "merged_into",
+            "photo_url",
+            "created_at",
+            "updated_at",
+          ],
           data.items.map((i) => [
             i.id,
             i.kind,
@@ -86,6 +101,7 @@ export function exporter(storage: HarganaStorage, clock: Clock) {
             i.kind === "commodity" ? i.pricingUnit : null,
             i.categoryId && categories.get(i.categoryId)?.name,
             i.aliases.join("; "),
+            i.kind === "commodity" && i.mergedInto ? items.get(i.mergedInto)?.name : null,
             i.photo?.imageUrl,
             i.createdAt,
             i.updatedAt,

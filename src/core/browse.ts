@@ -2,6 +2,7 @@ import type { Clock } from "./clock";
 import { CoreError } from "./errors";
 import { activeRegion } from "./places";
 import { effective, localDay, priceUnit, resolveStores, withoutCorrected } from "./prices";
+import { merges } from "./merge";
 import { live } from "./removed";
 import type { HarganaStorage } from "./storage";
 import type { Category, EntryUnit, Item, PriceObservation, Region, Store } from "./types";
@@ -41,13 +42,14 @@ export function browser(storage: HarganaStorage, clock: Clock) {
   return {
     async browse({ storeId = null, sort = "name" }: { storeId?: string | null; sort?: BrowseSort } = {}): Promise<BrowseResult> {
       const regionId = await activeRegion(storage);
-      const [region, stores, categories, items, observations, corrections] = await Promise.all([
+      const [region, stores, categories, items, observations, corrections, merged] = await Promise.all([
         storage.regions.get(regionId),
         storage.stores.where({ regionId }).filter(live).toArray(),
         storage.categories.orderBy("sortOrder").toArray(),
         storage.items.filter(live).toArray(),
         storage.observations.filter((o) => o.regionId === regionId).toArray(),
         storage.priceCorrections.toArray(),
+        merges(storage),
       ]);
       const store = storeId ? stores.find((s) => s.id === storeId) : null;
       if (storeId && !store) throw new CoreError("not_found", `Store ${storeId} not found`);
@@ -55,7 +57,7 @@ export function browser(storage: HarganaStorage, clock: Clock) {
       const today = localDay(clock.now());
 
       const byItem = new Map<string, PriceObservation[]>();
-      for (const o of withoutCorrected(observations, corrections).live) {
+      for (const o of withoutCorrected(observations, corrections).live.map(merged.asRoot)) {
         byItem.set(o.itemId, [...(byItem.get(o.itemId) ?? []), o]);
       }
       const entry = (item: Item, at: Store, observation: PriceObservation): BrowseEntry => {

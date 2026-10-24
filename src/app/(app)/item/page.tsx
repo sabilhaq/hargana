@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect } from "react";
 import { useDescribeItem } from "../items/describe";
 import { ItemPhoto } from "../items/photo";
 import { useCore } from "../core-provider";
@@ -11,6 +11,7 @@ import { usePermissions } from "../permissions";
 import { RemoveButton } from "../remove-button";
 import { Empty, Screen, useCoreData } from "../ui";
 import { AddToList } from "./add-to-list";
+import { MergeItems } from "./merge-items";
 import { PricePanel } from "./price-panel";
 
 // The result screen for one item (`?id=`): what it is, and its price at every store.
@@ -27,11 +28,22 @@ function ItemDetails() {
   const describe = useDescribeItem();
   const params = useSearchParams();
   const id = params.get("id") ?? "";
+  const router = useRouter();
+  // A duplicate merged into another item (an old link, the history) leads there.
+  const [mergedInto] = useCoreData(async (core) => {
+    const current = await core.currentItemId(id);
+    return current === id ? null : current;
+  }, [id]);
   const [item, reloadItem] = useCoreData((core) => core.getItem(id).catch(() => null), [id]);
+  useEffect(() => {
+    if (mergedInto) router.replace(`/item?id=${mergedInto}`);
+  }, [mergedInto, router]);
   const core = useCore();
   const [categories] = useCoreData((core) => core.listCategories());
   const category = item && categories?.find((c) => c.id === item.categoryId);
   const { canEdit, canManageSettings } = usePermissions();
+
+  if (mergedInto) return <Screen title="" back="/">{null}</Screen>;
 
   if (item === null) {
     return (
@@ -90,6 +102,7 @@ function ItemDetails() {
               {t("edit")}
             </Link>
           )}
+          {!item.removedAt && item.kind === "commodity" && <MergeItems item={item} onMerged={reloadItem} />}
           {!item.removedAt && <RemoveButton kind="item" id={item.id} onRemoved={reloadItem} />}
         </>
       )}

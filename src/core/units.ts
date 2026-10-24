@@ -22,6 +22,14 @@ export function compatibleUnits(target: EntryUnit): EntryUnit[] {
   return (Object.keys(UNITS) as EntryUnit[]).filter((unit) => UNITS[unit].dimension === dimension);
 }
 
+/** `qty` `unit` in `target` units, e.g. 5 ons → 0,5 kg; null when they do not convert. */
+export function convertQty(qty: number, unit: EntryUnit, target: EntryUnit): number | null {
+  const from = UNITS[unit];
+  const to = UNITS[target];
+  if (from.dimension !== to.dimension) return null;
+  return Math.round((qty * from.size * 1000) / to.size) / 1000;
+}
+
 /**
  * The price per one `target` unit, in integer minor units, for `amount` paid
  * for `qty` `unit`, rounded half up. Rp 18.000 for 500 g → Rp 36.000 per kg.

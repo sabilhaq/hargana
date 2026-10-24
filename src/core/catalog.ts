@@ -173,7 +173,7 @@ export function catalog(storage: HarganaStorage, clock: Clock, metadata?: Produc
 }
 
 /** Trimmed, non-empty, unique (ignoring case), and not just the name again. */
-function cleanAliases(aliases: string[], name: string) {
+export function cleanAliases(aliases: string[], name: string) {
   const seen = new Set([name.toLowerCase()]);
   const result: string[] = [];
   for (const alias of aliases.map((a) => a.trim()).filter(Boolean)) {

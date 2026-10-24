@@ -121,6 +121,11 @@ export type Commodity = {
   createdBy?: string | null;
   /** Set when the owner removed it: kept, but hidden and no longer counted anywhere. */
   removedAt?: string | null;
+  /**
+   * Set when the owner merged this duplicate into another item: kept, but
+   * hidden, and its prices count as that item's.
+   */
+  mergedInto?: string | null;
   updatedAt: string;
 };
 

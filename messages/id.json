@@ -46,7 +46,9 @@
     "no_current_store": "Pilih dulu “Saya di” untuk mencatat harga.",
     "incompatible_unit": "Satuan itu tidak bisa diubah ke satuan harga barang ini.",
     "no_price": "Belum ada harga di toko ini untuk dikonfirmasi.",
-    "chain_has_branches": "Hapus dulu semua cabang jaringan ini."
+    "chain_has_branches": "Hapus dulu semua cabang jaringan ini.",
+    "cannot_merge": "Barang ini tidak bisa digabungkan.",
+    "cannot_merge_products": "Barang dengan barcode tidak bisa digabungkan: barcode yang berbeda berarti barang yang berbeda."
   },
   "StoreType": {
     "branch": "Cabang",
@@ -415,6 +417,19 @@
     "emptyStore": "Belum ada harga yang dicatat di toko ini.",
     "promo": "promo",
     "addToList": "Tambah {item} ke daftar belanja"
+  },
+  "Merge": {
+    "open": "Gabungkan dengan barang lain…",
+    "title": "Gabungkan barang dobel",
+    "hint": "Cari barang yang sama dengan {keep} tapi tercatat dua kali. Harganya akan dihitung sebagai harga {keep}, dan namanya jadi nama lain {keep}.",
+    "search": "Cari barang dobel",
+    "none": "Tidak ada barang yang cocok.",
+    "notProduct": "Barang dengan barcode tidak bisa digabungkan",
+    "otherUnit": "Satuannya tidak bisa diubah ke satuan barang ini",
+    "confirmHint": "Gabungkan {duplicate} ke {keep}? {duplicate} disembunyikan untuk semua orang, harganya dihitung sebagai harga {keep}, dan mencari \"{duplicate}\" akan menemukan {keep}.",
+    "confirm": "Ya, gabungkan",
+    "back": "Kembali",
+    "cancel": "Batal"
   },
   "Remove": {
     "title": "Dihapus",

@@ -1,5 +1,6 @@
 import type { Clock } from "./clock";
 import { CoreError } from "./errors";
+import { merges } from "./merge";
 import { recorderId, recorders } from "./people";
 import { currentVisit } from "./places";
 import { live } from "./removed";
@@ -113,8 +114,9 @@ export function prices(
   clock: Clock,
   context: () => Promise<{ activeRegion: { id: string }; currentStore: Store | null }>,
 ) {
+  /** The item, or the item it was merged into. */
   async function mustItem(id: string) {
-    const item = await storage.items.get(id);
+    const item = await storage.items.get((await merges(storage)).rootId(id));
     if (!item) throw new CoreError("not_found", `Item ${id} not found`);
     return item;
   }
@@ -125,13 +127,18 @@ export function prices(
     return currentStore;
   }
 
-  /** The item's observations in a region that still count (see withoutCorrected). */
+  /**
+   * The item's observations in a region that still count (see withoutCorrected),
+   * with those of items merged into it, in its unit.
+   */
   async function observationsAt(itemId: string, regionId: string) {
+    const merged = await merges(storage);
+    const ids = merged.group(itemId);
     const [observations, corrections] = await Promise.all([
-      storage.observations.where({ itemId, regionId }).toArray(),
-      storage.priceCorrections.where({ itemId }).toArray(),
+      storage.observations.where("itemId").anyOf(ids).filter((o) => o.regionId === regionId).toArray(),
+      storage.priceCorrections.where("itemId").anyOf(ids).toArray(),
     ]);
-    return withoutCorrected(observations, corrections).live;
+    return withoutCorrected(observations, corrections).live.map(merged.asRoot);
   }
 
   /** The observation that gives `store` its current price, if any. */
@@ -323,12 +330,13 @@ export function prices(
     async stalePricesHere({ limit = 10 }: { limit?: number } = {}): Promise<{ prices: StalePrice[]; total: number; region: Region | null }> {
       const { currentStore: store } = await context();
       if (!store) return { prices: [], total: 0, region: null };
-      const [region, observations, corrections, dismissed, visit] = await Promise.all([
+      const [region, observations, corrections, dismissed, visit, merged] = await Promise.all([
         storage.regions.get(store.regionId),
         storage.observations.filter((o) => o.regionId === store.regionId).toArray(),
         storage.priceCorrections.toArray(),
         storage.settings.get(STALE_DISMISSED),
         currentVisit(storage),
+        merges(storage),
       ]);
       const hidden = new Set(
         (dismissed?.value as StaleDismissed | undefined)?.visit === visit ? (dismissed!.value as StaleDismissed).itemIds : [],
@@ -338,7 +346,7 @@ export function prices(
       const today = localDay(clock.now());
 
       const byItem = new Map<string, PriceObservation[]>();
-      for (const o of withoutCorrected(observations, corrections).live) {
+      for (const o of withoutCorrected(observations, corrections).live.map(merged.asRoot)) {
         byItem.set(o.itemId, [...(byItem.get(o.itemId) ?? []), o]);
       }
       const stale: { itemId: string; observation: PriceObservation; ageDays: number }[] = [];
@@ -379,7 +387,7 @@ export function prices(
       await storage.settings.put({ key: STALE_DISMISSED, value: { visit, itemIds } satisfies StaleDismissed });
     },
 
-    /** Every observation of an item, newest first, removed ones included. */
+    /** Every observation of an item (as recorded, without merged items'), newest first, removed ones included. */
     async listObservations(itemId: string) {
       const observations = await storage.observations.where({ itemId }).toArray();
       return observations.sort((a, b) => b.observedAt.localeCompare(a.observedAt));
