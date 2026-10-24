@@ -380,5 +380,21 @@
     "saving": "Hemat {amount} dibanding belanja di {store} saja",
     "splitTotal": "Total kalau dibeli terpisah: {total}",
     "unpriced": "Belum ada harga di mana pun: {items}"
+  },
+  "Browse": {
+    "title": "Jelajahi",
+    "hint": "Barang & harga per toko",
+    "store": "Toko",
+    "allStores": "Semua toko (harga termurah)",
+    "sort": "Urutkan",
+    "sort_name": "Nama",
+    "sort_price": "Termurah",
+    "sort_recent": "Terbaru dicek",
+    "count": "{count, plural, other {# barang}}",
+    "other": "Lainnya",
+    "empty": "Belum ada harga yang dicatat di wilayah ini.",
+    "emptyStore": "Belum ada harga yang dicatat di toko ini.",
+    "promo": "promo",
+    "addToList": "Tambah {item} ke daftar belanja"
   }
 }

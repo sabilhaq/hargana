@@ -32,6 +32,19 @@ export function ItemPhoto({ itemId, version }: { itemId: string; version?: unkno
   return <PhotoThumb photo={photo} />;
 }
 
+/** A small square thumbnail for list rows (no viewer); a blank square when the item has no photo. */
+export function SmallPhoto({ itemId }: { itemId: string }) {
+  const [photo] = useCoreData((core) => core.itemPhoto(itemId), [itemId]);
+  const local = useBytesUrl(photo?.thumb);
+  const src = local ?? photo?.thumbUrl;
+  return src ? (
+    // eslint-disable-next-line @next/next/no-img-element -- local object URLs and private photos
+    <img src={src} alt="" className="size-10 shrink-0 rounded-lg object-cover" />
+  ) : (
+    <span aria-hidden className="size-10 shrink-0 rounded-lg bg-neutral-100 dark:bg-neutral-800" />
+  );
+}
+
 function PhotoThumb({ photo }: { photo: PhotoView }) {
   const t = useTranslations("Photos");
   const [open, setOpen] = useState(false);

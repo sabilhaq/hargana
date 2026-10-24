@@ -11,5 +11,6 @@ export const APP_ROUTES = [
   "/settings/invites",
   "/item",
   "/list",
+  "/browse",
   "/items/edit",
 ] as const;

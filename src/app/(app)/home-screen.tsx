@@ -241,20 +241,24 @@ function Catalog() {
   );
 }
 
-/** "Daftar belanja", with how many items are still to buy. */
+/** "Jelajahi" and "Daftar belanja" (with how many items are still to buy). */
 function ListShortcut() {
-  const t = useTranslations("ShoppingList");
+  const t = useTranslations();
   const { status } = useSync();
   const [list] = useCoreData((core) => core.listShopping(), [status]);
   const open = list?.filter((e) => !e.checked).length ?? 0;
+  const tile = "flex flex-col rounded-xl border border-neutral-200 px-4 py-3 dark:border-neutral-800";
   return (
-    <Link
-      href="/list"
-      className="mt-4 flex items-center justify-between rounded-xl border border-neutral-200 px-4 py-3 dark:border-neutral-800"
-    >
-      <span className="font-semibold">{t("title")}</span>
-      <span className="text-sm opacity-70">{open > 0 ? t("toBuy", { count: open }) : t("open")} ›</span>
-    </Link>
+    <div className="mt-4 grid grid-cols-2 gap-3">
+      <Link href="/browse" className={tile}>
+        <span className="font-semibold">{t("Browse.title")}</span>
+        <span className="text-sm opacity-70">{t("Browse.hint")}</span>
+      </Link>
+      <Link href="/list" className={tile}>
+        <span className="font-semibold">{t("ShoppingList.title")}</span>
+        <span className="text-sm opacity-70">{open > 0 ? t("ShoppingList.toBuy", { count: open }) : t("ShoppingList.open")}</span>
+      </Link>
+    </div>
   );
 }
 

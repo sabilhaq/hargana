@@ -1,4 +1,5 @@
 import { liveQuery } from "dexie";
+import { browser } from "./browse";
 import { catalog } from "./catalog";
 import { exporter } from "./export";
 import { systemClock, type Clock } from "./clock";
@@ -20,6 +21,7 @@ export { PRICING_UNITS, SIZE_UNITS } from "./types";
 export type * from "./types";
 export { compatibleUnits, perUnitPrice } from "./units";
 export { emptyRecords } from "./sync";
+export type { BrowseEntry, BrowseResult, BrowseSort } from "./browse";
 export type { ShoppingEntry, ShoppingPlan, StoreCost, StoreTotal } from "./shopping";
 export { canEdit, canManageSettings, canRemovePrice } from "./permissions";
 export type { ExportData } from "./export";
@@ -65,6 +67,7 @@ export function createCore({ storage = new HarganaStorage(), clock = systemClock
     ...people(storage),
     ...photos(storage, clock),
     ...shopping(storage, clock),
+    ...browser(storage, clock),
     ...exporter(storage, clock),
     ...sync(storage, clock),
   };
