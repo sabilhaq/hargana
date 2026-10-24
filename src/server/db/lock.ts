@@ -13,7 +13,8 @@ export class DatabaseInUseError extends Error {
     readonly pid: number,
   ) {
     super(
-      `The local database in ${dir} is already open in process ${pid} (probably the dev server). ` +
+      `The local database in ${dir} is already open in process ${pid} (probably the dev server), ` +
+        `so process ${process.pid} (${process.argv.slice(1, 3).join(" ")}) cannot open it. ` +
         `Stop it before running this, or set PGLITE_DIR to use another folder.`,
     );
   }
