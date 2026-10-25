@@ -3,8 +3,9 @@ import { CoreError } from "./errors";
 import type { HarganaStorage } from "./storage";
 import type { RemovedRecords } from "./types";
 
-/** Not removed by the owner: what every list, search and price rule counts. */
-export const live = <T extends { removedAt?: string | null }>(record: T) => !record.removedAt;
+/** Not removed or merged away by the owner: what every list, search and price rule counts. */
+export const live = <T extends { removedAt?: string | null; mergedInto?: string | null }>(record: T) =>
+  !record.removedAt && !record.mergedInto;
 
 type Kind = "item" | "store" | "chain";
 const TABLES = { item: "items", store: "stores", chain: "chains" } as const;
@@ -33,10 +34,11 @@ export function removal(storage: HarganaStorage, clock: Clock) {
     /** Everything removed, most recently removed first. */
     async listRemoved(): Promise<RemovedRecords> {
       const newest = <T extends { removedAt?: string | null }>(a: T, b: T) => (b.removedAt ?? "").localeCompare(a.removedAt ?? "");
+      const removed = <T extends { removedAt?: string | null }>(record: T) => !!record.removedAt;
       const [items, stores, chains] = await Promise.all([
-        storage.items.filter((r) => !live(r)).toArray(),
-        storage.stores.filter((r) => !live(r)).toArray(),
-        storage.chains.filter((r) => !live(r)).toArray(),
+        storage.items.filter(removed).toArray(),
+        storage.stores.filter(removed).toArray(),
+        storage.chains.filter(removed).toArray(),
       ]);
       return { items: items.sort(newest), stores: stores.sort(newest), chains: chains.sort(newest) };
     },

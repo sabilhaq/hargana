@@ -9,7 +9,9 @@ export type CoreErrorCode =
   | "no_current_store"
   | "incompatible_unit"
   | "no_price"
-  | "chain_has_branches";
+  | "chain_has_branches"
+  | "cannot_merge"
+  | "cannot_merge_products";
 
 export class CoreError extends Error {
   constructor(

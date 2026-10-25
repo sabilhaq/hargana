@@ -1,5 +1,6 @@
 import type { Clock } from "./clock";
 import { CoreError } from "./errors";
+import { merges } from "./merge";
 import { activeRegion } from "./places";
 import { effective, localDay, priceUnit, resolveStores, withoutCorrected } from "./prices";
 import { live as notRemoved } from "./removed";
@@ -103,7 +104,8 @@ export function shopping(storage: HarganaStorage, clock: Clock) {
     async planShopping(): Promise<ShoppingPlan> {
       const regionId = await activeRegion(storage);
       const wanted = (await entries()).filter((e) => !e.checked && notRemoved(e.item));
-      const itemIds = wanted.map((e) => e.itemId);
+      const merged = await merges(storage);
+      const itemIds = wanted.flatMap((e) => merged.group(e.itemId));
       const [region, stores, chains, observations, corrections] = await Promise.all([
         storage.regions.get(regionId),
         storage.stores.where({ regionId }).filter(notRemoved).toArray(),
@@ -114,7 +116,7 @@ export function shopping(storage: HarganaStorage, clock: Clock) {
       const live = withoutCorrected(
         observations.filter((o) => o.regionId === regionId),
         corrections,
-      ).live;
+      ).live.map(merged.asRoot);
       const chainById = new Map(chains.map((c) => [c.id, c]));
       const now = clock.now().getTime();
       const today = localDay(clock.now());
